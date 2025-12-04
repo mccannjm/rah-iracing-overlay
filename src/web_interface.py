@@ -120,12 +120,17 @@ class WebInterface:
         """
         self.selected_overlays = selected_overlays or []
         self.app = Flask(__name__)
+        
+        # Configure security settings
+        self.app.config['MAX_CONTENT_LENGTH'] = 16 * 1024  # 16KB limit
+        
         self.app.register_blueprint(interface_bp, url_prefix='/')
         self.app.register_blueprint(overlays_bp, url_prefix='/overlay')
         
         self._configure_socketio()
         self.data_provider = DataProvider()
         self._setup_routes()
+        self._setup_security_headers()
         self.telemetry_thread = None
         self.shutdown_flag = False
         self._start_telemetry_thread()
@@ -140,7 +145,7 @@ class WebInterface:
                 'async_mode': 'threading',
                 'ping_timeout': 60,
                 'ping_interval': 25,
-                'cors_allowed_origins': '*',
+                'cors_allowed_origins': ['http://127.0.0.1:8085', 'http://localhost:8085'],
                 'logger': False, 
                 'engineio_logger': False
             }
@@ -148,7 +153,7 @@ class WebInterface:
         else:
             socketio_kwargs = {
                 'async_mode': 'eventlet',
-                'cors_allowed_origins': '*',
+                'cors_allowed_origins': ['http://127.0.0.1:8085', 'http://localhost:8085'],
             }
             logging.info("Using eventlet mode for SocketIO")
             
@@ -188,8 +193,50 @@ class WebInterface:
         """
         @self.app.route('/common/js/<path:filename>')
         def serve_common_js(filename: str):
+            # Validate filename to prevent path traversal
+            if not filename or '..' in filename:
+                return "Invalid filename", 400
+            
             common_js_folder = resource_path(os.path.join('common', 'js'))
+            
+            # Ensure the resolved path is within the common js directory
+            js_dir = os.path.abspath(common_js_folder)
+            requested_file = os.path.abspath(os.path.join(common_js_folder, filename))
+            
+            if not requested_file.startswith(js_dir):
+                return "Access denied", 403
+            
             return send_from_directory(common_js_folder, filename)
+
+    def _setup_security_headers(self) -> None:
+        """
+        Set up security headers for all responses.
+        """
+        @self.app.after_request
+        def add_security_headers(response):
+            # Prevent content type sniffing
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            
+            # Prevent clickjacking (but allow for overlay windows)
+            response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+            
+            # Basic XSS protection
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+            
+            # Don't send referrer to external sites
+            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            
+            # Content Security Policy for additional protection
+            response.headers['Content-Security-Policy'] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "  # Allow inline scripts for SocketIO
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "connect-src 'self' ws: wss:; "  # Allow WebSocket connections
+                "font-src 'self'"
+            )
+            
+            return response
 
     def _start_telemetry_thread(self) -> None:
         """

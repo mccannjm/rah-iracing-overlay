@@ -7,6 +7,11 @@ import logging
 import sys
 import threading
 import time
+from marshmallow import ValidationError
+from validation import (
+    OverlayRequestSchema, PositionRequestSchema, WindowPositionReportSchema,
+    CloseOverlaySchema, validate_folder_name, validate_request_data
+)
 
 interface_bp = Blueprint(
     'interface', __name__,
@@ -74,11 +79,24 @@ def get_overlays():
 
 @interface_bp.route('/launch', methods=['POST'])
 def launch_overlay():
-    data = request.get_json()
-    overlay_name = data.get('overlay')
-    is_transparent = data.get('transparent', True) 
-    
-    folder_name = next((overlay['folder_name'] for overlay in get_overlays().json if overlay['display_name'] == overlay_name), None)
+    try:
+        # Validate input data
+        data = validate_request_data(OverlayRequestSchema, request.get_json())
+        overlay_name = data.get('overlay')
+        is_transparent = data.get('transparent', True)
+        
+        folder_name = next((overlay['folder_name'] for overlay in get_overlays().json if overlay['display_name'] == overlay_name), None)
+        
+        # Additional validation for folder_name
+        if folder_name:
+            folder_name = validate_folder_name(folder_name)
+            
+    except ValidationError as e:
+        logging.warning(f"Invalid launch request: {e.messages}")
+        return jsonify({'status': 'error', 'message': 'Invalid request data', 'errors': e.messages}), 400
+    except ValueError as e:
+        logging.warning(f"Invalid folder name in launch request: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
     
     if folder_name:
         logging.debug(f"Attempting to launch overlay: {folder_name}")
@@ -174,13 +192,19 @@ def report_window_position():
     """
     Endpoint for pywebview windows to report their position directly from the window process
     """
-    data = request.get_json()
-    folder_name = data.get('folder_name')
-    position = data.get('position')
-    dpi_scale = data.get('dpi_scale', 1.0) 
-    
-    if not folder_name or not position:
-        return jsonify({'status': 'error', 'message': 'Missing required data'}), 400
+    try:
+        # Validate input data
+        data = validate_request_data(WindowPositionReportSchema, request.get_json())
+        folder_name = data.get('folder_name')
+        position = data.get('position')
+        dpi_scale = data.get('dpi_scale', 1.0)
+        
+    except ValidationError as e:
+        logging.warning(f"Invalid position report: {e.messages}")
+        return jsonify({'status': 'error', 'message': 'Invalid request data', 'errors': e.messages}), 400
+    except ValueError as e:
+        logging.warning(f"Invalid data in position report: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
     
     position['x'] = int(position['x'])
     position['y'] = int(position['y'])
@@ -301,9 +325,15 @@ def close_overlay():
     """
     Close a specific overlay
     """
-    data = request.get_json()
-    overlay_name = data.get('overlay')
-    folder_name = data.get('folder_name')
+    try:
+        # Validate input data
+        data = validate_request_data(CloseOverlaySchema, request.get_json())
+        overlay_name = data.get('overlay')
+        folder_name = data.get('folder_name')
+        
+    except ValidationError as e:
+        logging.warning(f"Invalid close overlay request: {e.messages}")
+        return jsonify({'status': 'error', 'message': 'Invalid request data', 'errors': e.messages}), 400
     
     if not folder_name:
         folder_name = next((overlay['folder_name'] for overlay in get_overlays().json 

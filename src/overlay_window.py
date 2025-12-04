@@ -6,6 +6,7 @@ import time
 import ctypes
 import logging
 import os
+import html
 
 def get_windows_dpi_scaling():
     """Get the Windows DPI scaling factor.
@@ -200,8 +201,8 @@ class OverlayWindow:
         if (!window.pywebview) {{
             window.pywebview = {{}};
         }}
-        window.pywebview.dpiScale = {self.dpi_scale};
-        console.log("DPI Scale:", {self.dpi_scale});
+        window.pywebview.dpiScale = {json.dumps(self.dpi_scale)};
+        console.log("DPI Scale:", {json.dumps(self.dpi_scale)});
         """
         self.window.evaluate_js(js_dpi)
     
@@ -217,13 +218,13 @@ class OverlayWindow:
             window.pywebview = {{}};
         }}
         window.pywebview.position = {{
-            x: {scaled_x},
-            y: {scaled_y}
+            x: {json.dumps(scaled_x)},
+            y: {json.dumps(scaled_y)}
         }};
         
         // Update position display if the external JS has created it
         if (typeof updatePositionDisplay === 'function') {{
-            updatePositionDisplay({scaled_x}, {scaled_y}, {self.dpi_scale});
+            updatePositionDisplay({json.dumps(scaled_x)}, {json.dumps(scaled_y)}, {json.dumps(self.dpi_scale)});
         }}
         """
         self.window.evaluate_js(js)
@@ -261,8 +262,8 @@ class OverlayWindow:
         
         // Load the scripts in sequence
         loadScriptsSequentially([
-            '%s',
-            '%s'
+            %s,
+            %s
         ], function() {
             // Call initializers after all scripts are loaded
             console.log('All scripts loaded, initializing...');
@@ -271,10 +272,10 @@ class OverlayWindow:
             }
             
             if (typeof initPositionReporter === 'function') {
-                initPositionReporter('%s');
+                initPositionReporter(%s);
             }
         });
-        """ % (js_files[0], js_files[1], self.folder_name)
+        """ % (json.dumps(js_files[0]), json.dumps(js_files[1]), json.dumps(self.folder_name))
         
         self.window.evaluate_js(js_loader)
 

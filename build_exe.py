@@ -17,11 +17,12 @@ def check_requirements():
     # Dictionary of required packages with their specific versions
     required_packages = {
         "pyirsdk": "1.3.5",
-        "flask": "3.0.3",
+        "flask": "3.1.2",
         "flask_socketio": "5.4.1",
-        "eventlet": "0.37.0",
+        "eventlet": "0.40.3",
         "pywebview": "4.4.1",
-        "dnspython": "2.4.2"
+        "dnspython": "2.4.2",
+        "marshmallow": "3.22.0"
     }
     
     for package, version in required_packages.items():
