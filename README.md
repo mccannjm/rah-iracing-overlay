@@ -37,9 +37,40 @@ cd iracing-input-telemetry-overlay
 
 ### **2. Install Dependencies**
 
+**Option A: Use the automated setup script (recommended)**
 ```bash
+python3 setup_environment.py
+```
+This script will:
+- Detect your system's pip command (pip3, pip, or python -m pip)
+- Handle virtual environments if needed (for externally-managed systems)
+- Install all security-patched dependencies
+- Create a convenience run script
+
+**Option B: Simple installation (if your system allows global installs)**
+```bash
+python3 install_requirements.py
+```
+
+**Option C: Manual installation**
+```bash
+# For systems that allow global installs
+pip3 install -r requirements.txt
+
+# For systems requiring virtual environments
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+### **Security Updates Included**
+This version includes critical security fixes:
+- **Flask 3.1.2** (patches CVE-2024-34069, CVE-2024-56326, and others)
+- **Eventlet 0.40.3** (patches CVE-2025-58068 HTTP Request Smuggling)
+- **Input validation** with Marshmallow schemas
+- **CORS restrictions** to specific origins
+- **Path traversal protection** for file serving
+- **Security headers** implementation
 
 ### **3. Compile into an EXE file**
 

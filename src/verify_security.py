@@ -129,7 +129,10 @@ def main():
     verify_file_changes()
     
     print("\n✅ Security verification completed!")
-    print("🔒 Please install updated dependencies: pip install -r requirements.txt")
+    print("🔒 Please install updated dependencies:")
+    print("   python3 ../install_requirements.py")
+    print("   OR")
+    print("   pip3 install -r ../requirements.txt")
 
 
 if __name__ == "__main__":

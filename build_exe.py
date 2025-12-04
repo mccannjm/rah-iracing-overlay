@@ -12,7 +12,16 @@ def check_requirements():
         print("PyInstaller found!")
     except ImportError:
         print("Installing PyInstaller...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+        try:
+            # Try pip3 first (common on macOS/Linux)
+            subprocess.check_call(["pip3", "install", "pyinstaller"])
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fall back to pip
+            try:
+                subprocess.check_call(["pip", "install", "pyinstaller"])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Final fallback to python -m pip
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
     
     # Dictionary of required packages with their specific versions
     required_packages = {
@@ -31,7 +40,16 @@ def check_requirements():
             print(f"{package} found!")
         except ImportError:
             print(f"Installing {package} version {version}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
+            try:
+                # Try pip3 first (common on macOS/Linux)
+                subprocess.check_call(["pip3", "install", f"{package}=={version}"])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Fall back to pip
+                try:
+                    subprocess.check_call(["pip", "install", f"{package}=={version}"])
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # Final fallback to python -m pip
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
 
 def build_exe():
     """Build the executable using PyInstaller"""
