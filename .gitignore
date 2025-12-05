@@ -1,3 +1,56 @@
-build/
-/build/
+# Python
+# Byte-compiled / cached files
+__pycache__/
+*.py[cod]
+*$py.class
 
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Testing / coverage
+.pytest_cache/
+coverage/
+.coverage
+.coverage.*
+
+# Mypy / caches
+.mypy_cache/
+
+# JavaScript / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build / output folders
+dist/
+out/
+.next/
+build/
+
+# Environment files (do NOT commit secrets)
+.env
+.env.*
+.env.*.local
+.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Misc
+*.log
