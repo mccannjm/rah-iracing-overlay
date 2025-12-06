@@ -2,6 +2,7 @@
     "name": "standings",
     "display_name": "Race Standings",
     "description": "Displays relative race standings with position, driver name, class, license, iRating, and time intervals",
+    "enabled": false,
     "resolution": {
         "width": 600,
         "height": 800
@@ -10,7 +11,30 @@
         "x": 100,
         "y": 100
     },
+    "window": {
+        "opacity": 0.9,
+        "always_on_top": true
+    },
     "dpi_info": {
         "scale": 1.0
+    },
+    "config": {
+        "cars_ahead": 5,
+        "cars_behind": 5,
+        "show_leader": true,
+        "columns": {
+            "position": true,
+            "car_number": true,
+            "driver_name": true,
+            "license": true,
+            "irating": true,
+            "interval": true,
+            "last_lap": false,
+            "class_badge": true
+        },
+        "multiclass": {
+            "show_class_position": true,
+            "highlight_own_class": true
+        }
     }
 }

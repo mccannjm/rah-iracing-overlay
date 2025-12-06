@@ -50,7 +50,10 @@ def get_overlays():
                 description = properties.get('description', 'No description available.')
                 position = properties.get('position', None)
                 dpi_info = properties.get('dpi_info', {'scale': 1.0})
-                
+                enabled = properties.get('enabled', False)
+                window_settings = properties.get('window', {'opacity': 0.9, 'always_on_top': True})
+                config = properties.get('config', {})
+
                 preview_gif = properties.get('preview_gif', None)
                 if not preview_gif:
                     images_folder = os.path.join(overlay_path, 'static', 'images')
@@ -58,14 +61,14 @@ def get_overlays():
                         preview_file = os.path.join(images_folder, 'preview.gif')
                         if os.path.exists(preview_file):
                             preview_gif = f"/overlay/{name}/static/images/preview.gif"
-                    
+
                     if not preview_gif:
                         static_folder = os.path.join(overlay_path, 'static')
                         if os.path.exists(static_folder):
                             preview_file = os.path.join(static_folder, 'preview.gif')
                             if os.path.exists(preview_file):
                                 preview_gif = f"/overlay/{name}/static/preview.gif"
-                
+
                 overlays.append({
                     'display_name': display_name,
                     'folder_name': name,
@@ -73,6 +76,9 @@ def get_overlays():
                     'url': f"http://127.0.0.1:8085/overlay/{name}",
                     'position': position,
                     'dpi_info': dpi_info,
+                    'enabled': enabled,
+                    'window': window_settings,
+                    'config': config,
                     'preview_gif': preview_gif
                 })
     return jsonify(overlays)
@@ -278,24 +284,65 @@ def launch_overlay_with_transparency(folder_name, is_transparent):
 def save_position():
     data = request.get_json()
     overlay_name = data.get('overlay')
-    
+
     folder_name = next((overlay['folder_name'] for overlay in get_overlays().json if overlay['display_name'] == overlay_name), None)
-    
+
     if folder_name:
         position = data.get('position')
-        
+
         if position:
             save_overlay_position(folder_name, position['x'], position['y'])
-            
+
             return jsonify({
-                'status': 'success', 
-                'message': f'Position saved for {folder_name}.', 
+                'status': 'success',
+                'message': f'Position saved for {folder_name}.',
                 'position': position
             }), 200
         else:
             return jsonify({'status': 'error', 'message': 'No position data provided.'}), 400
-    
+
     return jsonify({'status': 'error', 'message': 'Overlay not found.'}), 404
+
+@interface_bp.route('/update_overlay_settings', methods=['POST'])
+def update_overlay_settings():
+    """
+    Update overlay settings (enabled, config, window options)
+    """
+    try:
+        data = request.get_json()
+        folder_name = data.get('folder_name')
+
+        if not folder_name:
+            return jsonify({'status': 'error', 'message': 'folder_name is required'}), 400
+
+        properties_path = os.path.join(os.path.dirname(__file__), '..', 'overlays', folder_name, 'properties.json')
+
+        if not os.path.exists(properties_path):
+            return jsonify({'status': 'error', 'message': f'Properties file not found for {folder_name}'}), 404
+
+        with open(properties_path, 'r') as f:
+            properties = json.load(f)
+
+        # Update fields if provided
+        if 'enabled' in data:
+            properties['enabled'] = bool(data['enabled'])
+
+        if 'config' in data:
+            properties['config'] = data['config']
+
+        if 'window' in data:
+            properties['window'] = data['window']
+
+        # Write back to file
+        with open(properties_path, 'w') as f:
+            json.dump(properties, f, indent=4)
+
+        logging.info(f"Updated settings for {folder_name}")
+        return jsonify({'status': 'success', 'message': f'Settings updated for {folder_name}'}), 200
+
+    except Exception as e:
+        logging.error(f"Error updating overlay settings: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 def save_overlay_position(folder_name, x, y):
     """

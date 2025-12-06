@@ -22,11 +22,37 @@
                 <div class="overlay-preview-container">
                     <div id="previewContent">
                         <div class="preview-placeholder">
-                            <p>Select an overlay to see its preview</p>
+                            <p>Select an overlay to see its preview and settings</p>
                         </div>
                         <div class="preview-content" style="display: none;">
                             <h3 id="previewTitle">Overlay Name</h3>
                             <div class="preview-description" id="previewDescription">Description will appear here.</div>
+
+                            <!-- Settings Panel -->
+                            <div class="settings-panel">
+                                <div class="settings-section">
+                                    <h4>General Settings</h4>
+                                    <div class="setting-item">
+                                        <label class="setting-label">
+                                            <input type="checkbox" id="setting-enabled" class="setting-checkbox">
+                                            <span>Enable on Startup</span>
+                                        </label>
+                                        <small>Automatically launch this overlay when the application starts</small>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section" id="overlay-specific-settings" style="display: none;">
+                                    <h4>Overlay Settings</h4>
+                                    <div id="specific-settings-content"></div>
+                                </div>
+
+                                <div class="settings-actions">
+                                    <button id="save-settings-btn" class="save-settings-btn">
+                                        <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                                    </button>
+                                </div>
+                            </div>
+
                             <div class="preview-image">
                                 <img id="previewGif" src="" alt="Overlay Preview">
                             </div>

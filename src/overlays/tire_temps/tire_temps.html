@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tire Temperatures</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='tire_temps', filename='tire_temps.css') }}">
+    <script src="/common/js/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="tire-container">
+        <!-- Reminder for building model -->
+        <div id="tire-reminder" class="tire-reminder" style="display: none;">
+            <div class="reminder-content">
+                <div class="reminder-icon">⚠️</div>
+                <div class="reminder-text">
+                    <h3>Tire Temperature Data Not Available</h3>
+                    <p>This car class only updates tire temps in pits.</p>
+                    <p>Run practice laps to build a prediction model!</p>
+                </div>
+                <div class="reminder-actions">
+                    <button id="dismiss-reminder" class="reminder-btn secondary">Dismiss</button>
+                    <button id="dont-show-reminder" class="reminder-btn secondary">Don't Show Again</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- No data state -->
+        <div id="no-data-state" class="no-data-state" style="display: none;">
+            <div class="no-data-icon">🏁</div>
+            <p>Waiting for session data...</p>
+        </div>
+
+        <!-- Tire temperature display -->
+        <div id="tire-display" class="tire-display">
+            <div class="tire-grid">
+                <!-- Front Left -->
+                <div class="tire-quadrant" data-tire="LF">
+                    <div class="tire-label">LF</div>
+                    <div class="tire-zones">
+                        <div class="zone" data-zone="L">
+                            <span class="temp-value" id="temp-LF-L">---</span>
+                            <span class="zone-label">L</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LF-L"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="C">
+                            <span class="temp-value" id="temp-LF-C">---</span>
+                            <span class="zone-label">C</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LF-M"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="R">
+                            <span class="temp-value" id="temp-LF-R">---</span>
+                            <span class="zone-label">R</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LF-R"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tire-pressure" id="pressure-LF">--- psi</div>
+                </div>
+
+                <!-- Front Right -->
+                <div class="tire-quadrant" data-tire="RF">
+                    <div class="tire-label">RF</div>
+                    <div class="tire-zones">
+                        <div class="zone" data-zone="L">
+                            <span class="temp-value" id="temp-RF-L">---</span>
+                            <span class="zone-label">L</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RF-L"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="C">
+                            <span class="temp-value" id="temp-RF-C">---</span>
+                            <span class="zone-label">C</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RF-M"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="R">
+                            <span class="temp-value" id="temp-RF-R">---</span>
+                            <span class="zone-label">R</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RF-R"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tire-pressure" id="pressure-RF">--- psi</div>
+                </div>
+
+                <!-- Rear Left -->
+                <div class="tire-quadrant" data-tire="LR">
+                    <div class="tire-label">LR</div>
+                    <div class="tire-zones">
+                        <div class="zone" data-zone="L">
+                            <span class="temp-value" id="temp-LR-L">---</span>
+                            <span class="zone-label">L</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LR-L"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="C">
+                            <span class="temp-value" id="temp-LR-C">---</span>
+                            <span class="zone-label">C</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LR-M"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="R">
+                            <span class="temp-value" id="temp-LR-R">---</span>
+                            <span class="zone-label">R</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-LR-R"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tire-pressure" id="pressure-LR">--- psi</div>
+                </div>
+
+                <!-- Rear Right -->
+                <div class="tire-quadrant" data-tire="RR">
+                    <div class="tire-label">RR</div>
+                    <div class="tire-zones">
+                        <div class="zone" data-zone="L">
+                            <span class="temp-value" id="temp-RR-L">---</span>
+                            <span class="zone-label">L</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RR-L"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="C">
+                            <span class="temp-value" id="temp-RR-C">---</span>
+                            <span class="zone-label">C</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RR-M"></div>
+                            </div>
+                        </div>
+                        <div class="zone" data-zone="R">
+                            <span class="temp-value" id="temp-RR-R">---</span>
+                            <span class="zone-label">R</span>
+                            <div class="wear-bar">
+                                <div class="wear-fill" id="wear-RR-R"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tire-pressure" id="pressure-RR">--- psi</div>
+                </div>
+            </div>
+
+            <div class="status-info">
+                <span id="data-status">Waiting for data...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('overlays.serve_static', overlay_name='tire_temps', filename='tire_temps.js') }}"></script>
+</body>
+</html>

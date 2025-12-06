@@ -510,3 +510,137 @@ class DataProvider:
                         driver['interval_seconds'] = 0.0
 
         return standings
+
+    def get_tire_data(self) -> Dict[str, Any]:
+        """
+        Retrieve tire temperature, wear, and pressure data.
+
+        Returns:
+            Dict[str, Any]: Tire data including temperatures, wear, pressure, and status
+                or empty dict if not connected or error occurs
+        """
+        if not self.is_connected:
+            logging.debug("Not connected to iRacing")
+            return {}
+
+        try:
+            self.ir_sdk.freeze_var_buffer_latest()
+            return self._extract_tire_data()
+        except Exception as e:
+            logging.error(f"Error extracting tire data: {e}")
+            return {}
+
+    def _extract_tire_data(self) -> Dict[str, Any]:
+        """
+        Extract tire temperature, wear, and pressure information from iRacing telemetry.
+
+        Returns:
+            Dict with tire data including temperatures, wear, pressure, and pit status
+        """
+        # Check if player is in pit
+        in_pit = bool(self.ir_sdk['OnPitRoad'])
+
+        # Get tire temperatures (these may be None if not in pit for some car classes)
+        temperatures = {
+            'LF': {
+                'L': self._safe_get_float('LFtempCL'),
+                'C': self._safe_get_float('LFtempCM'),
+                'R': self._safe_get_float('LFtempCR')
+            },
+            'RF': {
+                'L': self._safe_get_float('RFtempCL'),
+                'C': self._safe_get_float('RFtempCM'),
+                'R': self._safe_get_float('RFtempCR')
+            },
+            'LR': {
+                'L': self._safe_get_float('LRtempCL'),
+                'C': self._safe_get_float('LRtempCM'),
+                'R': self._safe_get_float('LRtempCR')
+            },
+            'RR': {
+                'L': self._safe_get_float('RRtempCL'),
+                'C': self._safe_get_float('RRtempCM'),
+                'R': self._safe_get_float('RRtempCR')
+            }
+        }
+
+        # Get tire wear (0.0 = new, 1.0 = completely worn)
+        wear = {
+            'LF': {
+                'L': self._safe_get_float('LFwearL'),
+                'M': self._safe_get_float('LFwearM'),
+                'R': self._safe_get_float('LFwearR')
+            },
+            'RF': {
+                'L': self._safe_get_float('RFwearL'),
+                'M': self._safe_get_float('RFwearM'),
+                'R': self._safe_get_float('RFwearR')
+            },
+            'LR': {
+                'L': self._safe_get_float('LRwearL'),
+                'M': self._safe_get_float('LRwearM'),
+                'R': self._safe_get_float('LRwearR')
+            },
+            'RR': {
+                'L': self._safe_get_float('RRwearL'),
+                'M': self._safe_get_float('RRwearM'),
+                'R': self._safe_get_float('RRwearR')
+            }
+        }
+
+        # Get tire pressure
+        pressure = {
+            'LF': self._safe_get_float('LFpressure'),
+            'RF': self._safe_get_float('RFpressure'),
+            'LR': self._safe_get_float('LRpressure'),
+            'RR': self._safe_get_float('RRpressure')
+        }
+
+        # Check if temperature data is actually available
+        # Some car classes only update temps in pits
+        data_available = self._check_temp_data_available(temperatures)
+
+        return {
+            'temperatures': temperatures,
+            'wear': wear,
+            'pressure': pressure,
+            'in_pit': in_pit,
+            'data_available': data_available
+        }
+
+    def _safe_get_float(self, key: str) -> Optional[float]:
+        """
+        Safely get a float value from iRacing SDK.
+
+        Args:
+            key: The telemetry key to retrieve
+
+        Returns:
+            Float value or None if not available
+        """
+        try:
+            value = self.ir_sdk[key]
+            if value is not None and value > 0:
+                return float(value)
+            return None
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _check_temp_data_available(self, temperatures: Dict) -> bool:
+        """
+        Check if temperature data is actually updating.
+
+        Some car classes only update tire temps when in pit lane.
+
+        Args:
+            temperatures: Temperature data dict
+
+        Returns:
+            True if temp data appears to be available
+        """
+        # Check if any temperature value is non-zero
+        for tire_data in temperatures.values():
+            for temp in tire_data.values():
+                if temp is not None and temp > 0:
+                    return True
+        return False

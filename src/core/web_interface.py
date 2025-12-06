@@ -115,6 +115,18 @@ class StandingsNamespace(Namespace):
         logging.info("Client disconnected from standings namespace")
 
 
+class TireTempsNamespace(Namespace):
+    """Socket.IO namespace for tire temperature data."""
+
+    def on_connect(self) -> None:
+        """Handle client connection to tire temps namespace."""
+        logging.info("Client connected to tire temps namespace")
+
+    def on_disconnect(self) -> None:
+        """Handle client disconnection from tire temps namespace."""
+        logging.info("Client disconnected from tire temps namespace")
+
+
 class WebInterface:
     """
     Manages the web interface for displaying iRacing telemetry overlays.
@@ -199,6 +211,9 @@ class WebInterface:
             elif overlay == 'standings':
                 self.socketio.on_namespace(StandingsNamespace(f'/{overlay}'))
                 print(f"Registered standings namespace: {overlay}")
+            elif overlay == 'tire_temps':
+                self.socketio.on_namespace(TireTempsNamespace(f'/{overlay}'))
+                print(f"Registered tire temps namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -314,6 +329,14 @@ class WebInterface:
                         self.socketio.emit('standings_update', standings_data, namespace='/standings')
                     except Exception as e:
                         logging.error(f"Error in standings processing: {e}")
+
+                # Get tire temperature data
+                tire_data = self.data_provider.get_tire_data()
+                if tire_data:
+                    try:
+                        self.socketio.emit('tire_data_update', tire_data, namespace='/tire_temps')
+                    except Exception as e:
+                        logging.error(f"Error in tire temps processing: {e}")
 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")

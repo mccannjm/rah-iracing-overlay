@@ -1,0 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto Mono', monospace;
+    background: transparent;
+    color: #EFEFEF;
+    overflow: hidden;
+}
+
+.tire-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+/* Reminder Styles */
+.tire-reminder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    padding: 20px;
+}
+
+.reminder-content {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border: 2px solid #f39c12;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.reminder-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.reminder-text h3 {
+    color: #f39c12;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.reminder-text p {
+    color: #DDD;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.reminder-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.reminder-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.reminder-btn.primary {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+    color: white;
+}
+
+.reminder-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #DDD;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reminder-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* No Data State */
+.no-data-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #999;
+}
+
+.no-data-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.no-data-state p {
+    font-size: 1.1em;
+    color: #999;
+}
+
+/* Tire Display */
+.tire-display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.tire-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+}
+
+.tire-quadrant {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.tire-quadrant:hover {
+    border-color: #ED2727;
+    box-shadow: 0 0 15px rgba(237, 39, 39, 0.3);
+}
+
+.tire-label {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #ED2727;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.tire-zones {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 1;
+}
+
+.zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 10px 5px;
+    position: relative;
+}
+
+.temp-value {
+    font-size: 1.4em;
+    font-weight: 700;
+    margin-bottom: 5px;
+    transition: color 0.3s ease;
+}
+
+.zone-label {
+    font-size: 0.8em;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+/* Temperature Color Coding */
+.temp-cold {
+    color: #3498db; /* Blue */
+    text-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.temp-warming {
+    color: #5dade2; /* Light Blue */
+}
+
+.temp-optimal {
+    color: #2ecc71; /* Green */
+    text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+}
+
+.temp-hot {
+    color: #f39c12; /* Orange */
+    text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+}
+
+.temp-critical {
+    color: #e74c3c; /* Red */
+    text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Wear Bar */
+.wear-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.wear-fill {
+    height: 100%;
+    background: #2ecc71;
+    transition: all 0.5s ease;
+    border-radius: 3px;
+}
+
+/* Tire Pressure */
+.tire-pressure {
+    text-align: center;
+    font-size: 0.9em;
+    color: #DDD;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Status Info */
+.status-info {
+    text-align: center;
+    padding: 15px;
+    background: rgba(30, 30, 30, 0.8);
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.status-info span {
+    font-size: 0.95em;
+    font-weight: 500;
+}

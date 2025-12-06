@@ -1,0 +1,39 @@
+{
+    "name": "tire_temps",
+    "display_name": "Tire Temperatures",
+    "description": "Real-time and predicted tire temperatures with wear indicators. Shows temps when available (in pits) and will support predictive modeling in the future.",
+    "enabled": false,
+    "resolution": {
+        "width": 500,
+        "height": 400
+    },
+    "position": {
+        "x": 1100,
+        "y": 100
+    },
+    "window": {
+        "opacity": 0.9,
+        "always_on_top": true
+    },
+    "dpi_info": {
+        "scale": 1.0
+    },
+    "config": {
+        "temperature_unit": "F",
+        "display_mode": "current",
+        "show_wear": true,
+        "show_pressure": true,
+        "reminder": {
+            "enabled": true,
+            "dismissible": true,
+            "permanently_dismissed": false
+        },
+        "temp_ranges": {
+            "cold": 150,
+            "optimal_min": 150,
+            "optimal_max": 200,
+            "hot": 200,
+            "critical": 230
+        }
+    }
+}
