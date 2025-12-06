@@ -55,7 +55,7 @@ if using_fallback_mode:
         logging.critical("Application cannot run without SocketIO support")
         sys.exit(1)
 
-from data_provider import DataProvider
+from core.data_provider import DataProvider
 from interface import interface_bp
 from overlays import overlays_bp
 

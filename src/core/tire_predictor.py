@@ -11,11 +11,11 @@ import threading
 from typing import Dict, Optional, List
 from collections import deque
 
-from tire_physics_model import TirePhysicsModel
-from tire_pattern_learner import TirePatternLearner
-from tire_model_trainer import TireModelTrainer
-from tire_data_collector import TireDataCollector
-from storage_manager import StorageManager
+from core.tire_physics_model import TirePhysicsModel
+from core.tire_pattern_learner import TirePatternLearner
+from core.tire_model_trainer import TireModelTrainer
+from core.tire_data_collector import TireDataCollector
+from core.storage_manager import StorageManager
 
 
 class TirePredictor:

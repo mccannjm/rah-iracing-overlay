@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Union, Any
 
 # Import tire prediction system
 try:
-    from tire_predictor import TirePredictor
+    from core.tire_predictor import TirePredictor
     TIRE_PREDICTION_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"Tire prediction not available: {e}")
