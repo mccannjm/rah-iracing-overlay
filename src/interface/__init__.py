@@ -1,14 +1,14 @@
 from flask import Blueprint, render_template, send_from_directory, jsonify, request
 import os
 import multiprocessing
-from overlay_window import OverlayWindow
+from core.overlay_window import OverlayWindow
 import json
 import logging
 import sys
 import threading
 import time
 from marshmallow import ValidationError
-from validation import (
+from core.validation import (
     OverlayRequestSchema, PositionRequestSchema, WindowPositionReportSchema,
     CloseOverlaySchema, validate_folder_name, validate_request_data
 )
