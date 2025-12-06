@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", function() {
     let socket = null;
     let lastUpdate = 0;
     let currentData = null;
+    let lapTimingData = null;
     let isConnected = false;
+    let currentMode = 'standings'; // 'standings' or 'lap_timing'
 
     // DOM elements
     const standingsContent = document.getElementById('standingsContent');
@@ -50,10 +52,38 @@ document.addEventListener("DOMContentLoaded", function() {
 
             currentData = data;
 
+            // Determine mode based on session type
+            const sessionType = data.session_type ? data.session_type.toLowerCase() : 'race';
+            if (sessionType === 'race') {
+                currentMode = 'standings';
+            } else {
+                currentMode = 'lap_timing'; // practice or qualifying
+            }
+
             // Throttle UI updates
             const now = Date.now();
             if (now - lastUpdate >= CONFIG.updateThrottle) {
-                updateStandings(data);
+                if (currentMode === 'standings') {
+                    updateStandings(data);
+                }
+                lastUpdate = now;
+            }
+        });
+
+        socket.on('lap_timing_update', function(data) {
+            if (!data || typeof data !== 'object') {
+                console.error('Invalid lap timing data received:', data);
+                return;
+            }
+
+            lapTimingData = data;
+
+            // Throttle UI updates
+            const now = Date.now();
+            if (now - lastUpdate >= CONFIG.updateThrottle) {
+                if (currentMode === 'lap_timing') {
+                    updateLapTiming(data);
+                }
                 lastUpdate = now;
             }
         });
@@ -272,6 +302,119 @@ document.addEventListener("DOMContentLoaded", function() {
     function formatNumber(num) {
         if (!num || isNaN(num)) return '-';
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // Format session time remaining
+    function formatSessionTime(seconds) {
+        if (!seconds || seconds <= 0) return '-';
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+    }
+
+    // Update lap timing display for practice/qualifying sessions
+    function updateLapTiming(data) {
+        // Update session type
+        if (data.session_type) {
+            sessionInfo.textContent = data.session_type.toUpperCase();
+        }
+
+        // Clear standings content and show lap timing
+        standingsContent.innerHTML = '';
+
+        // Create lap timing container
+        const timingContainer = document.createElement('div');
+        timingContainer.className = 'lap-timing-container';
+
+        // Session info section
+        const sessionSection = document.createElement('div');
+        sessionSection.className = 'timing-section';
+        sessionSection.innerHTML = `
+            <div class="timing-header">SESSION INFO</div>
+            <div class="timing-row">
+                <span class="timing-label">Time Remaining:</span>
+                <span class="timing-value">${formatSessionTime(data.session_time_remain)}</span>
+            </div>
+            <div class="timing-row">
+                <span class="timing-label">Current Lap:</span>
+                <span class="timing-value">${data.current_lap || 0}</span>
+            </div>
+        `;
+        timingContainer.appendChild(sessionSection);
+
+        // Lap times section
+        const lapTimesSection = document.createElement('div');
+        lapTimesSection.className = 'timing-section';
+
+        let bestTimeHtml = '';
+        if (data.best_lap_time > 0) {
+            bestTimeHtml = `
+                <div class="timing-row timing-highlight">
+                    <span class="timing-label">Best Lap:</span>
+                    <span class="timing-value timing-best">${formatTime(data.best_lap_time)}</span>
+                </div>
+            `;
+        } else {
+            bestTimeHtml = `
+                <div class="timing-row timing-highlight">
+                    <span class="timing-label">Best Lap:</span>
+                    <span class="timing-value">-</span>
+                </div>
+            `;
+        }
+
+        let lastTimeHtml = '';
+        if (data.last_lap_time > 0) {
+            const deltaClass = data.delta_to_best > 0 ? 'delta-negative' : data.delta_to_best < 0 ? 'delta-positive' : 'delta-neutral';
+            const deltaText = data.delta_to_best > 0 ? `+${data.delta_to_best.toFixed(3)}` : data.delta_to_best.toFixed(3);
+            lastTimeHtml = `
+                <div class="timing-row">
+                    <span class="timing-label">Last Lap:</span>
+                    <span class="timing-value">${formatTime(data.last_lap_time)} <span class="${deltaClass}">(${deltaText})</span></span>
+                </div>
+            `;
+        } else {
+            lastTimeHtml = `
+                <div class="timing-row">
+                    <span class="timing-label">Last Lap:</span>
+                    <span class="timing-value">-</span>
+                </div>
+            `;
+        }
+
+        let currentTimeHtml = '';
+        if (data.current_lap_time > 0) {
+            currentTimeHtml = `
+                <div class="timing-row">
+                    <span class="timing-label">Current Lap:</span>
+                    <span class="timing-value timing-current">${formatTime(data.current_lap_time)}</span>
+                </div>
+            `;
+        } else {
+            currentTimeHtml = `
+                <div class="timing-row">
+                    <span class="timing-label">Current Lap:</span>
+                    <span class="timing-value">-</span>
+                </div>
+            `;
+        }
+
+        lapTimesSection.innerHTML = `
+            <div class="timing-header">LAP TIMES</div>
+            ${bestTimeHtml}
+            ${lastTimeHtml}
+            ${currentTimeHtml}
+        `;
+        timingContainer.appendChild(lapTimesSection);
+
+        standingsContent.appendChild(timingContainer);
     }
 
     // Initialize the overlay

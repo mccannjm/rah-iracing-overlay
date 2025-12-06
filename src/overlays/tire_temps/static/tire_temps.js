@@ -60,9 +60,9 @@ socket.on('tire_predictions_update', (data) => {
 
     currentPredictions = data;
 
-    // If we don't have actual data, use predictions
+    // If we don't have actual data, use predictions (but still pass actualData for pressure)
     if (!currentActualData || !currentActualData.data_available) {
-        updateTireDisplay(null, data);
+        updateTireDisplay(currentActualData, data);
     } else {
         // We have actual data, but still update trends and advice
         updatePredictionInfo(data);
@@ -118,8 +118,8 @@ function updateTireDisplay(actualData, predictionData) {
             updateTireConfidence(tire, null);
         }
 
-        // Update pressure (only from actual data)
-        if (useActual && actualData.pressure && config.show_pressure) {
+        // Update pressure (always try to show if available)
+        if (actualData && actualData.pressure && config.show_pressure) {
             const pressure = actualData.pressure[tire];
             updatePressure(tire, pressure);
         }

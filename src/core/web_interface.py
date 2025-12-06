@@ -330,6 +330,14 @@ class WebInterface:
                     except Exception as e:
                         logging.error(f"Error in standings processing: {e}")
 
+                # Get lap timing data for practice/qualifying sessions
+                lap_timing_data = self.data_provider.get_lap_timing_data()
+                if lap_timing_data:
+                    try:
+                        self.socketio.emit('lap_timing_update', lap_timing_data, namespace='/standings')
+                    except Exception as e:
+                        logging.error(f"Error in lap timing processing: {e}")
+
                 # Get tire temperature data (actual temps when available)
                 tire_data = self.data_provider.get_tire_data()
                 if tire_data:

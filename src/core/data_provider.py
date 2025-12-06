@@ -540,6 +540,72 @@ class DataProvider:
 
         return standings
 
+    def get_lap_timing_data(self) -> Dict[str, Any]:
+        """
+        Retrieve lap timing data for practice/qualifying sessions.
+
+        Returns:
+            Dict containing:
+            - session_type: Current session type (practice/qualifying/race)
+            - session_time_remain: Time remaining in session (seconds)
+            - session_time_total: Total session time (seconds)
+            - current_lap: Current lap number
+            - last_lap_time: Last completed lap time
+            - best_lap_time: Best lap time this session
+            - current_lap_time: Current lap time in progress
+            - delta_to_best: Delta of last lap to best lap
+            - recent_laps: List of recent lap times (last 10 laps)
+        """
+        if not self.is_connected:
+            logging.debug("Not connected to iRacing")
+            return {}
+
+        try:
+            self.ir_sdk.freeze_var_buffer_latest()
+            return self._extract_lap_timing()
+        except Exception as e:
+            logging.error(f"Error extracting lap timing data: {e}")
+            return {}
+
+    def _extract_lap_timing(self) -> Dict[str, Any]:
+        """Extract lap timing information from iRacing telemetry."""
+        player_idx = int(self.ir_sdk['PlayerCarIdx'])
+
+        # Session info
+        session_type = self._current_session_type()
+        session_time_remain = float(self.ir_sdk['SessionTimeRemain'] or 0.0)
+        session_time_total = float(self.ir_sdk['SessionTimeTotal'] or 0.0)
+
+        # Lap counts
+        current_lap = int(self.ir_sdk['Lap'] or 0)
+
+        # Lap times
+        last_lap_time = float(self.ir_sdk['LapLastLapTime'] or 0.0)
+        best_lap_time = float(self.ir_sdk['CarIdxBestLapTime'][player_idx] or 0.0)
+        current_lap_time = float(self.ir_sdk['LapCurrentLapTime'] or 0.0)
+
+        # Delta calculation
+        delta_to_best = 0.0
+        if last_lap_time > 0 and best_lap_time > 0:
+            delta_to_best = last_lap_time - best_lap_time
+
+        # Recent laps - stored in memory for this session
+        # For now, we'll return empty list. This would require tracking lap times across frames
+        # which could be implemented if needed
+        recent_laps = []
+
+        return {
+            'session_type': session_type,
+            'session_time_remain': round(session_time_remain, 1),
+            'session_time_total': round(session_time_total, 1),
+            'current_lap': current_lap,
+            'last_lap_time': round(last_lap_time, 3) if last_lap_time > 0 else 0.0,
+            'best_lap_time': round(best_lap_time, 3) if best_lap_time > 0 else 0.0,
+            'current_lap_time': round(current_lap_time, 3) if current_lap_time > 0 else 0.0,
+            'delta_to_best': round(delta_to_best, 3),
+            'recent_laps': recent_laps,
+        }
+
     def get_tire_data(self) -> Dict[str, Any]:
         """
         Retrieve tire temperature, wear, and pressure data.

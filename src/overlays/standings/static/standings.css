@@ -2,19 +2,22 @@
 html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(0, 0, 0, 0);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     color: #ffffff;
     overflow: hidden;
     transform: translateZ(0);
     will-change: transform;
+    box-sizing: border-box;
 }
 
 /* Main container */
 .standings-container {
     background: rgba(15, 15, 15, 0.85);
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px;
     cursor: move;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -23,11 +26,11 @@ html, body {
     position: relative;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     width: 100%;
-    max-width: 600px;
-    height: 100vh;
-    max-height: 800px;
+    height: 100%;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* Header */
@@ -35,40 +38,40 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
-    margin-bottom: 8px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
     border-bottom: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .header-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     color: #ffffff;
 }
 
 .session-info {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #00d4ff;
     background: rgba(0, 212, 255, 0.15);
-    padding: 4px 12px;
+    padding: 3px 10px;
     border-radius: 4px;
 }
 
 /* Table header */
 .standings-table-header {
     display: grid;
-    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
-    gap: 8px;
-    padding: 8px 12px;
+    grid-template-columns: 35px 1fr 55px 55px 60px 85px 85px 45px;
+    gap: 6px;
+    padding: 6px 10px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 /* Column alignment */
@@ -137,13 +140,13 @@ html, body {
 /* Standing row */
 .standing-row {
     display: grid;
-    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
-    gap: 8px;
-    padding: 10px 12px;
+    grid-template-columns: 35px 1fr 55px 55px 60px 85px 85px 45px;
+    gap: 6px;
+    padding: 8px 10px;
     margin-bottom: 2px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     transition: background 0.2s ease, transform 0.2s ease;
     border-left: 3px solid transparent;
 }
@@ -199,11 +202,11 @@ html, body {
 .connection-status {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    margin-top: 8px;
+    gap: 6px;
+    padding: 6px 10px;
+    margin-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .status-indicator {
@@ -247,9 +250,9 @@ html, body {
 /* No data message */
 .no-data {
     text-align: center;
-    padding: 40px 20px;
+    padding: 30px 15px;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 14px;
+    font-size: 13px;
 }
 
 /* Responsive adjustments */
@@ -305,6 +308,75 @@ html, body {
 
 .col-irating[data-ir-mid="true"] {
     color: #00d4ff;
+}
+
+/* Lap timing display styles */
+.lap-timing-container {
+    padding: 10px;
+}
+
+.timing-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.timing-section:last-child {
+    margin-bottom: 0;
+}
+
+.timing-header {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: #00d4ff;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.timing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 6px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.timing-row:last-child {
+    margin-bottom: 0;
+}
+
+.timing-row.timing-highlight {
+    background: rgba(0, 212, 255, 0.1);
+    border-left: 3px solid #00d4ff;
+    padding-left: 9px;
+}
+
+.timing-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.timing-value {
+    color: #ffffff;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.timing-value.timing-best {
+    color: #00ff88;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.timing-value.timing-current {
+    color: #00d4ff;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 /* Performance optimizations */
