@@ -24,7 +24,7 @@ html, body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 12px;
+    padding: 8px;
     background: rgba(0, 0, 0, 0.85);
     box-sizing: border-box;
     overflow: hidden;
@@ -139,19 +139,21 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 12px;
+    gap: 8px;
     flex: 1;
+    max-height: calc(100% - 80px);
 }
 
 .tire-quadrant {
     background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 8px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: all 0.3s ease;
+    min-height: 0;
 }
 
 .tire-quadrant:hover {
@@ -160,18 +162,19 @@ html, body {
 }
 
 .tire-label {
-    font-size: 1.1em;
+    font-size: 1em;
     font-weight: 700;
     color: #ED2727;
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .tire-zones {
     display: flex;
     justify-content: space-between;
-    gap: 6px;
+    gap: 4px;
     flex: 1;
+    min-height: 0;
 }
 
 .zone {
@@ -181,22 +184,23 @@ html, body {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.3);
-    border-radius: 6px;
-    padding: 8px 4px;
+    border-radius: 4px;
+    padding: 6px 3px;
     position: relative;
+    min-width: 0;
 }
 
 .temp-value {
-    font-size: 1.3em;
+    font-size: 1.2em;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     transition: color 0.3s ease;
 }
 
 .zone-label {
-    font-size: 0.8em;
+    font-size: 0.75em;
     color: #999;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 /* Temperature Color Coding */
@@ -237,11 +241,11 @@ html, body {
 /* Wear Bar */
 .wear-bar {
     width: 100%;
-    height: 6px;
+    height: 4px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
-    margin-top: 5px;
+    margin-top: 3px;
 }
 
 .wear-fill {
@@ -254,24 +258,24 @@ html, body {
 /* Tire Pressure */
 .tire-pressure {
     text-align: center;
-    font-size: 0.85em;
+    font-size: 0.8em;
     color: #DDD;
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Status Info */
 .status-info {
     text-align: center;
-    padding: 10px;
+    padding: 8px;
     background: rgba(30, 30, 30, 0.8);
-    border-radius: 6px;
-    margin-top: 10px;
+    border-radius: 4px;
+    margin-top: 8px;
 }
 
 .status-info span {
-    font-size: 0.95em;
+    font-size: 0.85em;
     font-weight: 500;
 }
 
@@ -314,20 +318,20 @@ html, body {
 
 /* Advice Container */
 .advice-container {
-    margin-top: 10px;
-    padding: 10px;
+    margin-top: 8px;
+    padding: 8px;
     background: rgba(30, 30, 30, 0.9);
-    border-radius: 6px;
-    border-left: 4px solid #f39c12;
+    border-radius: 4px;
+    border-left: 3px solid #f39c12;
 }
 
 .advice-item {
-    padding: 8px 0;
-    font-size: 0.95em;
+    padding: 6px 0;
+    font-size: 0.85em;
     color: #f39c12;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .advice-item:not(:last-child) {

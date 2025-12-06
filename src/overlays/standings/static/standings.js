@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let lapTimingData = null;
     let isConnected = false;
     let currentMode = 'standings'; // 'standings' or 'lap_timing'
+    let compactMode = true; // Start in compact mode
 
     // DOM elements
     const standingsContent = document.getElementById('standingsContent');
@@ -54,10 +55,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Determine mode based on session type
             const sessionType = data.session_type ? data.session_type.toLowerCase() : 'race';
-            if (sessionType === 'race') {
-                currentMode = 'standings';
-            } else {
-                currentMode = 'lap_timing'; // practice or qualifying
+            const newMode = sessionType === 'race' ? 'standings' : 'lap_timing';
+
+            // If mode changed, clear content once
+            if (newMode !== currentMode) {
+                currentMode = newMode;
+                standingsContent.innerHTML = '';
             }
 
             // Throttle UI updates
@@ -326,95 +329,106 @@ document.addEventListener("DOMContentLoaded", function() {
             sessionInfo.textContent = data.session_type.toUpperCase();
         }
 
-        // Clear standings content and show lap timing
-        standingsContent.innerHTML = '';
+        // Check if timing container already exists
+        let timingContainer = standingsContent.querySelector('.lap-timing-container');
 
-        // Create lap timing container
-        const timingContainer = document.createElement('div');
-        timingContainer.className = 'lap-timing-container';
+        if (!timingContainer) {
+            // First time creating the structure
+            standingsContent.innerHTML = '';
+            timingContainer = document.createElement('div');
+            timingContainer.className = 'lap-timing-container';
 
-        // Session info section
-        const sessionSection = document.createElement('div');
-        sessionSection.className = 'timing-section';
-        sessionSection.innerHTML = `
-            <div class="timing-header">SESSION INFO</div>
-            <div class="timing-row">
-                <span class="timing-label">Time Remaining:</span>
-                <span class="timing-value">${formatSessionTime(data.session_time_remain)}</span>
-            </div>
-            <div class="timing-row">
-                <span class="timing-label">Current Lap:</span>
-                <span class="timing-value">${data.current_lap || 0}</span>
-            </div>
-        `;
-        timingContainer.appendChild(sessionSection);
-
-        // Lap times section
-        const lapTimesSection = document.createElement('div');
-        lapTimesSection.className = 'timing-section';
-
-        let bestTimeHtml = '';
-        if (data.best_lap_time > 0) {
-            bestTimeHtml = `
-                <div class="timing-row timing-highlight">
-                    <span class="timing-label">Best Lap:</span>
-                    <span class="timing-value timing-best">${formatTime(data.best_lap_time)}</span>
-                </div>
-            `;
-        } else {
-            bestTimeHtml = `
-                <div class="timing-row timing-highlight">
-                    <span class="timing-label">Best Lap:</span>
-                    <span class="timing-value">-</span>
-                </div>
-            `;
-        }
-
-        let lastTimeHtml = '';
-        if (data.last_lap_time > 0) {
-            const deltaClass = data.delta_to_best > 0 ? 'delta-negative' : data.delta_to_best < 0 ? 'delta-positive' : 'delta-neutral';
-            const deltaText = data.delta_to_best > 0 ? `+${data.delta_to_best.toFixed(3)}` : data.delta_to_best.toFixed(3);
-            lastTimeHtml = `
+            // Create session info section with IDs for easy updates
+            const sessionSection = document.createElement('div');
+            sessionSection.className = 'timing-section';
+            sessionSection.innerHTML = `
+                <div class="timing-header">SESSION INFO</div>
                 <div class="timing-row">
-                    <span class="timing-label">Last Lap:</span>
-                    <span class="timing-value">${formatTime(data.last_lap_time)} <span class="${deltaClass}">(${deltaText})</span></span>
+                    <span class="timing-label">Time Remaining:</span>
+                    <span class="timing-value" id="time-remaining">-</span>
                 </div>
-            `;
-        } else {
-            lastTimeHtml = `
-                <div class="timing-row">
-                    <span class="timing-label">Last Lap:</span>
-                    <span class="timing-value">-</span>
-                </div>
-            `;
-        }
-
-        let currentTimeHtml = '';
-        if (data.current_lap_time > 0) {
-            currentTimeHtml = `
                 <div class="timing-row">
                     <span class="timing-label">Current Lap:</span>
-                    <span class="timing-value timing-current">${formatTime(data.current_lap_time)}</span>
+                    <span class="timing-value" id="current-lap-num">0</span>
                 </div>
             `;
-        } else {
-            currentTimeHtml = `
+            timingContainer.appendChild(sessionSection);
+
+            // Create lap times section with IDs for easy updates
+            const lapTimesSection = document.createElement('div');
+            lapTimesSection.className = 'timing-section';
+            lapTimesSection.innerHTML = `
+                <div class="timing-header">LAP TIMES</div>
+                <div class="timing-row timing-highlight">
+                    <span class="timing-label">Best Lap:</span>
+                    <span class="timing-value timing-best" id="best-lap">-</span>
+                </div>
+                <div class="timing-row">
+                    <span class="timing-label">Last Lap:</span>
+                    <span class="timing-value" id="last-lap">-</span>
+                </div>
                 <div class="timing-row">
                     <span class="timing-label">Current Lap:</span>
-                    <span class="timing-value">-</span>
+                    <span class="timing-value timing-current" id="current-lap">-</span>
                 </div>
             `;
+            timingContainer.appendChild(lapTimesSection);
+
+            standingsContent.appendChild(timingContainer);
         }
 
-        lapTimesSection.innerHTML = `
-            <div class="timing-header">LAP TIMES</div>
-            ${bestTimeHtml}
-            ${lastTimeHtml}
-            ${currentTimeHtml}
-        `;
-        timingContainer.appendChild(lapTimesSection);
+        // Now just update the values (no DOM rebuild)
+        const timeRemaining = document.getElementById('time-remaining');
+        const currentLapNum = document.getElementById('current-lap-num');
+        const bestLap = document.getElementById('best-lap');
+        const lastLap = document.getElementById('last-lap');
+        const currentLapTime = document.getElementById('current-lap');
 
-        standingsContent.appendChild(timingContainer);
+        if (timeRemaining) {
+            timeRemaining.textContent = formatSessionTime(data.session_time_remain);
+        }
+
+        if (currentLapNum) {
+            currentLapNum.textContent = data.current_lap || 0;
+        }
+
+        if (bestLap) {
+            bestLap.textContent = data.best_lap_time > 0 ? formatTime(data.best_lap_time) : '-';
+        }
+
+        if (lastLap) {
+            if (data.last_lap_time > 0) {
+                const deltaClass = data.delta_to_best > 0 ? 'delta-negative' : data.delta_to_best < 0 ? 'delta-positive' : 'delta-neutral';
+                const deltaText = data.delta_to_best > 0 ? `+${data.delta_to_best.toFixed(3)}` : data.delta_to_best.toFixed(3);
+                lastLap.innerHTML = `${formatTime(data.last_lap_time)} <span class="${deltaClass}">(${deltaText})</span>`;
+            } else {
+                lastLap.textContent = '-';
+            }
+        }
+
+        if (currentLapTime) {
+            currentLapTime.textContent = data.current_lap_time > 0 ? formatTime(data.current_lap_time) : '-';
+        }
+    }
+
+    // Toggle size mode
+    function toggleSize() {
+        compactMode = !compactMode;
+        const container = document.querySelector('.standings-container');
+        if (compactMode) {
+            container.classList.remove('size-normal');
+            container.classList.add('size-compact');
+        } else {
+            container.classList.remove('size-compact');
+            container.classList.add('size-normal');
+        }
+
+        // Update button text
+        const toggleBtn = document.getElementById('size-toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.textContent = compactMode ? '⊕' : '⊖';
+            toggleBtn.title = compactMode ? 'Switch to Normal Size' : 'Switch to Compact Size';
+        }
     }
 
     // Initialize the overlay
@@ -422,4 +436,22 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Show initial loading state
     updateConnectionStatus('connecting', 'Connecting...');
+
+    // Add size toggle button
+    const standingsHeader = document.querySelector('.standings-header');
+    if (standingsHeader) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'size-toggle-btn';
+        toggleBtn.className = 'size-toggle-btn';
+        toggleBtn.textContent = '⊕';
+        toggleBtn.title = 'Switch to Normal Size';
+        toggleBtn.onclick = toggleSize;
+        standingsHeader.appendChild(toggleBtn);
+    }
+
+    // Set initial compact mode
+    const container = document.querySelector('.standings-container');
+    if (container) {
+        container.classList.add('size-compact');
+    }
 });

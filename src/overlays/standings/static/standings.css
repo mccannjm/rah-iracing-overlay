@@ -41,6 +41,7 @@ html, body {
     padding: 6px 10px;
     margin-bottom: 6px;
     border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    gap: 10px;
 }
 
 .header-title {
@@ -377,6 +378,79 @@ html, body {
 .timing-value.timing-current {
     color: #00d4ff;
     animation: pulse 2s ease-in-out infinite;
+}
+
+/* Size toggle button */
+.size-toggle-btn {
+    background: rgba(0, 212, 255, 0.2);
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 30px;
+    font-weight: bold;
+}
+
+.size-toggle-btn:hover {
+    background: rgba(0, 212, 255, 0.3);
+    border-color: #00d4ff;
+    transform: scale(1.1);
+}
+
+/* Normal size mode (restore original sizing) */
+.standings-container.size-normal {
+    padding: 12px;
+}
+
+.standings-container.size-normal .standings-header {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.standings-container.size-normal .header-title {
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
+.standings-container.size-normal .session-info {
+    font-size: 14px;
+    padding: 4px 12px;
+}
+
+.standings-container.size-normal .standings-table-header {
+    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.standings-container.size-normal .standing-row {
+    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.standings-container.size-normal .connection-status {
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 11px;
+}
+
+.standings-container.size-normal .timing-section {
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.standings-container.size-normal .timing-row {
+    padding: 8px 6px;
+    font-size: 13px;
 }
 
 /* Performance optimizations */
