@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Standings</title>
+    <link rel="stylesheet" href="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.css') }}">
+</head>
+<body>
+    <div class="standings-container pywebview-drag-region">
+        <div class="standings-header">
+            <div class="header-title">STANDINGS</div>
+            <div class="session-info" id="sessionInfo">RACE</div>
+        </div>
+
+        <div class="standings-table-header">
+            <div class="col-pos">P</div>
+            <div class="col-name">DRIVER</div>
+            <div class="col-class">CLASS</div>
+            <div class="col-license">LIC</div>
+            <div class="col-irating">iR</div>
+            <div class="col-lastlap">LAST LAP</div>
+            <div class="col-interval">INTERVAL</div>
+            <div class="col-delta">Δ</div>
+        </div>
+
+        <div class="standings-content" id="standingsContent">
+            <!-- Standings rows will be inserted here dynamically -->
+        </div>
+
+        <div class="connection-status" id="connectionStatus">
+            <span class="status-indicator"></span>
+            <span class="status-text">Connecting...</span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('serve_common_js', filename='socket.io.min.js') }}"></script>
+    <script src="{{ url_for('overlays.serve_static', overlay_name='standings', filename='standings.js') }}"></script>
+</body>
+</html>

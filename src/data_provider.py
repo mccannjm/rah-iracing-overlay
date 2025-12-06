@@ -269,3 +269,244 @@ class DataProvider:
             self.lap_times.append(lap_time)
             if len(self.lap_times) > 10:
                 self.lap_times.pop(0)
+
+    def get_standings_data(self) -> Dict[str, Any]:
+        """
+        Retrieve standings data for the relative standings overlay.
+
+        Returns a dict containing:
+        - player_idx: Player's car index
+        - standings: List of driver standings with position, name, class, etc.
+        - session_type: Current session type
+        - is_multiclass: Whether this is a multiclass race
+
+        Returns:
+            Dict[str, Any]: Standings data or empty dict if not connected
+        """
+        if not self.is_connected:
+            logging.debug("Not connected to iRacing")
+            return {}
+
+        try:
+            self.ir_sdk.freeze_var_buffer_latest()
+            return self._extract_standings()
+        except Exception as e:
+            logging.error(f"Error extracting standings data: {e}")
+            return {}
+
+    def _extract_standings(self) -> Dict[str, Any]:
+        """
+        Extract and compute standings information from iRacing telemetry.
+
+        Calculates:
+        - Current race positions
+        - Driver information from SessionInfo
+        - Time intervals between cars
+        - Position deltas from race start
+        - Lap counts and pit status
+        """
+        # Get player car index
+        player_idx = int(self.ir_sdk['PlayerCarIdx'])
+
+        # Get session info
+        session_type = self._current_session_type()
+
+        # Parse SessionInfo for driver metadata
+        raw_session_info = self.ir_sdk['SessionInfo']
+        if isinstance(raw_session_info, dict):
+            session_info = raw_session_info
+        else:
+            session_info = yaml.safe_load(raw_session_info or "") or {}
+
+        # Build driver info lookup
+        driver_info = {}
+        for driver in session_info.get('DriverInfo', {}).get('Drivers', []):
+            car_idx = int(driver.get('CarIdx', -1))
+            if car_idx >= 0:
+                driver_info[car_idx] = {
+                    'name': driver.get('UserName', 'Unknown'),
+                    'car_class_short': driver.get('CarClassShortName', ''),
+                    'car_class_color': driver.get('CarClassColor', 0xFFFFFF),
+                    'car_number': driver.get('CarNumber', ''),
+                }
+
+        # Determine if multiclass
+        unique_classes = set(d['car_class_short'] for d in driver_info.values() if d['car_class_short'])
+        is_multiclass = len(unique_classes) > 1
+
+        # Get telemetry arrays
+        positions = self.ir_sdk['CarIdxPosition']
+        lap_dist_pct = self.ir_sdk['CarIdxLapDistPct']
+        last_lap_times = self.ir_sdk['CarIdxLastLapTime']
+        lap_counts = self.ir_sdk['CarIdxLap']
+        track_surface = self.ir_sdk['CarIdxTrackSurface']
+        on_pit_road = self.ir_sdk['CarIdxOnPitRoad']
+
+        # License and iRating arrays
+        license_strings = self.ir_sdk['CarIdxLicString']
+        iratings = self.ir_sdk['CarIdxIRating']
+
+        # Get starting positions for delta calculation
+        starting_positions = self._get_starting_positions(session_info)
+
+        # Build standings list
+        standings = []
+
+        for idx in range(len(positions) if positions else 0):
+            # Skip if not on track (NotInWorld = -1)
+            if track_surface and track_surface[idx] == -1:
+                continue
+
+            position = positions[idx] if positions else 0
+
+            # Skip invalid positions
+            if position <= 0:
+                continue
+
+            # Get driver info
+            driver = driver_info.get(idx, {
+                'name': f'Car {idx}',
+                'car_class_short': '',
+                'car_class_color': 0xFFFFFF,
+                'car_number': str(idx),
+            })
+
+            # Calculate position delta from start
+            start_pos = starting_positions.get(idx, position)
+            position_delta = start_pos - position  # Positive = gained positions
+
+            # Get last lap time
+            last_lap = last_lap_times[idx] if last_lap_times and last_lap_times[idx] > 0 else 0.0
+
+            # Get lap count
+            lap = lap_counts[idx] if lap_counts else 0
+
+            # Check pit status
+            in_pit = bool(on_pit_road[idx]) if on_pit_road else False
+
+            # Get license and iRating
+            license_str = license_strings[idx] if license_strings else ''
+            irating = int(iratings[idx]) if iratings and iratings[idx] > 0 else 0
+
+            # Get lap distance percentage for interval calculation
+            dist_pct = lap_dist_pct[idx] if lap_dist_pct else 0.0
+
+            standings.append({
+                'car_idx': idx,
+                'position': position,
+                'driver_name': driver['name'],
+                'car_number': driver['car_number'],
+                'car_class': driver['car_class_short'],
+                'car_class_color': driver['car_class_color'],
+                'license': license_str,
+                'irating': irating,
+                'last_lap_time': round(last_lap, 3) if last_lap > 0 else 0.0,
+                'lap_count': lap,
+                'in_pit': in_pit,
+                'position_delta': position_delta,
+                'lap_dist_pct': dist_pct,
+                'is_player': idx == player_idx,
+            })
+
+        # Sort by position
+        standings.sort(key=lambda x: x['position'])
+
+        # Calculate intervals (time gap to car ahead)
+        standings = self._calculate_intervals(standings)
+
+        return {
+            'player_idx': player_idx,
+            'standings': standings,
+            'session_type': session_type,
+            'is_multiclass': is_multiclass,
+        }
+
+    def _get_starting_positions(self, session_info: Dict) -> Dict[int, int]:
+        """
+        Extract starting grid positions from SessionInfo.
+
+        Args:
+            session_info: Parsed SessionInfo YAML
+
+        Returns:
+            Dict mapping car_idx to starting position
+        """
+        starting_positions = {}
+
+        try:
+            session_num = int(self.ir_sdk['SessionNum'])
+
+            for session in session_info.get('Sessions', []):
+                if int(session.get('SessionNum', -1)) == session_num:
+                    results = session.get('ResultsPositions', [])
+
+                    # If this is a race, try to get grid from qualifying results
+                    if session.get('SessionType', '').lower() == 'race' and not results:
+                        # Look for qualifying session results
+                        for prev_session in session_info.get('Sessions', []):
+                            if prev_session.get('SessionType', '').lower() in ['qualify', 'qualifying']:
+                                results = prev_session.get('ResultsPositions', [])
+                                break
+
+                    # Get starting positions from results
+                    for result in results:
+                        car_idx = int(result.get('CarIdx', -1))
+                        position = int(result.get('Position', -1))
+                        if car_idx >= 0 and position >= 0:
+                            starting_positions[car_idx] = position + 1  # Position is 0-indexed
+
+                    break
+        except Exception as e:
+            logging.debug(f"Could not extract starting positions: {e}")
+
+        return starting_positions
+
+    def _calculate_intervals(self, standings: List[Dict]) -> List[Dict]:
+        """
+        Calculate time intervals between cars.
+
+        For cars on the same lap, estimate time gap based on lap distance percentage.
+        For lapped cars, show lap deficit.
+
+        Args:
+            standings: List of driver standings sorted by position
+
+        Returns:
+            List of standings with 'interval' field added
+        """
+        for i, driver in enumerate(standings):
+            if i == 0:
+                # Leader has no interval
+                driver['interval'] = 'LEADER'
+                driver['interval_seconds'] = 0.0
+            else:
+                car_ahead = standings[i - 1]
+
+                # Check lap difference
+                lap_diff = car_ahead['lap_count'] - driver['lap_count']
+
+                if lap_diff > 0:
+                    # Lapped
+                    driver['interval'] = f"+{lap_diff} LAP" if lap_diff == 1 else f"+{lap_diff} LAPS"
+                    driver['interval_seconds'] = 999.0  # Large number for sorting
+                elif lap_diff < 0:
+                    # Car ahead is lapped (shouldn't happen in sorted order, but handle it)
+                    driver['interval'] = f"-{abs(lap_diff)} LAP" if abs(lap_diff) == 1 else f"-{abs(lap_diff)} LAPS"
+                    driver['interval_seconds'] = -999.0
+                else:
+                    # Same lap - estimate time gap using lap distance percentage and last lap time
+                    dist_diff = car_ahead['lap_dist_pct'] - driver['lap_dist_pct']
+
+                    if dist_diff < 0:
+                        dist_diff += 1.0  # Wrapped around
+
+                    # Use car ahead's last lap time to estimate gap
+                    if car_ahead['last_lap_time'] > 0:
+                        gap_seconds = dist_diff * car_ahead['last_lap_time']
+                        driver['interval'] = f"+{gap_seconds:.3f}s"
+                        driver['interval_seconds'] = gap_seconds
+                    else:
+                        driver['interval'] = "---"
+                        driver['interval_seconds'] = 0.0
+
+        return standings

@@ -2,6 +2,11 @@
 
 **iRacing Input Telemetry Overlay** is an open-source Python-based project that provides real-time telemetry from iRacing, displaying input data both through a web interface so you can put it on programs like OBS or screen overlay for using it on your game.
 
+## **Available Overlays**
+
+- **Input Telemetry**: Displays real-time steering, throttle, brake, and clutch inputs
+- **Race Standings**: Shows relative race positions with driver names, classes, iRating, lap times, and intervals (NEW!)
+
 I just didn't wanted to pay for some overlays subcriptions to have the overlay that I actually wanted, so why not trying? I hope you feel the same, this is free of course ;)
 
 <p align="center">
@@ -81,10 +86,6 @@ python3.10.exe (or your version) build_exe.py
 ## **Usage**
 
 Just open the .exe file like a normal windows program, you will be welcomed by an easy interace to open any of the overlays, as well as modify its position or opening it on their web version to get the link for OBS.
-
-<p align="center">
-  <img src=https://github.com/RaulArcos/rah-iracing-overlay/blob/development/images/interface_with_movement.png  width="600">
-</p>
 
 ## Windows Security: Unblocking DLL Files
 

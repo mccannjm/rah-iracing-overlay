@@ -93,7 +93,7 @@ class TelemetryNamespace(Namespace):
 
 class DriverInFrontNamespace(Namespace):
     """Socket.IO namespace for driver in front data."""
-    
+
     def on_connect(self) -> None:
         """Handle client connection to driver in front namespace."""
         logging.info("Client connected to driver in front namespace")
@@ -101,6 +101,18 @@ class DriverInFrontNamespace(Namespace):
     def on_disconnect(self) -> None:
         """Handle client disconnection from driver in front namespace."""
         logging.info("Client disconnected from driver in front namespace")
+
+
+class StandingsNamespace(Namespace):
+    """Socket.IO namespace for standings data."""
+
+    def on_connect(self) -> None:
+        """Handle client connection to standings namespace."""
+        logging.info("Client connected to standings namespace")
+
+    def on_disconnect(self) -> None:
+        """Handle client disconnection from standings namespace."""
+        logging.info("Client disconnected from standings namespace")
 
 
 class WebInterface:
@@ -184,6 +196,9 @@ class WebInterface:
             elif overlay == 'input_telemetry':
                 self.socketio.on_namespace(TelemetryNamespace(f'/{overlay}'))
                 print(f"Registered telemetry namespace: {overlay}")
+            elif overlay == 'standings':
+                self.socketio.on_namespace(StandingsNamespace(f'/{overlay}'))
+                print(f"Registered standings namespace: {overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -291,7 +306,15 @@ class WebInterface:
                     self.socketio.emit('driver_in_front_update', driver_data, namespace='/driver_in_front')
                 except Exception as e:
                     logging.error(f"Error in driver in front processing: {e}")
-                
+
+                # Get standings data
+                standings_data = self.data_provider.get_standings_data()
+                if standings_data:
+                    try:
+                        self.socketio.emit('standings_update', standings_data, namespace='/standings')
+                    except Exception as e:
+                        logging.error(f"Error in standings processing: {e}")
+
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")
     

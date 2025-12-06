@@ -1,0 +1,318 @@
+/* Base styles */
+html, body {
+    margin: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: #ffffff;
+    overflow: hidden;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Main container */
+.standings-container {
+    background: rgba(15, 15, 15, 0.85);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: move;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    pointer-events: auto;
+    z-index: 1000;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 600px;
+    height: 100vh;
+    max-height: 800px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.standings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ffffff;
+}
+
+.session-info {
+    font-size: 14px;
+    font-weight: 600;
+    color: #00d4ff;
+    background: rgba(0, 212, 255, 0.15);
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+/* Table header */
+.standings-table-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 4px;
+}
+
+/* Column alignment */
+.col-pos {
+    text-align: center;
+}
+
+.col-name {
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.col-class {
+    text-align: center;
+}
+
+.col-license {
+    text-align: center;
+}
+
+.col-irating {
+    text-align: right;
+}
+
+.col-lastlap {
+    text-align: right;
+}
+
+.col-interval {
+    text-align: right;
+}
+
+.col-delta {
+    text-align: center;
+}
+
+/* Standings content area */
+.standings-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
+/* Custom scrollbar */
+.standings-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.standings-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.standings-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.standings-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Standing row */
+.standing-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px 60px 65px 90px 90px 50px;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 2px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    font-size: 13px;
+    transition: background 0.2s ease, transform 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.standing-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(2px);
+}
+
+/* Player row highlight */
+.standing-row.player-row {
+    background: rgba(255, 215, 0, 0.15);
+    border-left-color: #ffd700;
+    font-weight: 600;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.standing-row.player-row:hover {
+    background: rgba(255, 215, 0, 0.2);
+}
+
+/* Pit status */
+.standing-row.in-pit {
+    opacity: 0.6;
+    background: rgba(255, 165, 0, 0.1);
+    border-left-color: #ffa500;
+}
+
+.standing-row.in-pit .col-name::after {
+    content: ' PIT';
+    font-size: 10px;
+    color: #ffa500;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* Position delta colors */
+.delta-positive {
+    color: #00ff88;
+    font-weight: 700;
+}
+
+.delta-negative {
+    color: #ff4444;
+    font-weight: 700;
+}
+
+.delta-neutral {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Connection status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 11px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.status-connected {
+    background: #00ff88;
+}
+
+.status-indicator.status-disconnected {
+    background: #ff4444;
+}
+
+.status-indicator.status-error {
+    background: #ffaa00;
+}
+
+.status-indicator.status-connecting {
+    background: #00d4ff;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.status-text {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+/* No data message */
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .standings-table-header,
+    .standing-row {
+        grid-template-columns: 35px 1fr 50px 50px 55px 80px 80px 45px;
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+
+    .header-title {
+        font-size: 16px;
+    }
+
+    .session-info {
+        font-size: 12px;
+    }
+}
+
+/* Smooth animations */
+.standing-row {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Leader indicator */
+.standing-row:first-child {
+    border-top: 2px solid rgba(255, 215, 0, 0.3);
+    margin-top: 4px;
+}
+
+/* Lap indicator */
+.col-interval[data-lapped="true"] {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+/* iRating color coding */
+.col-irating[data-ir-high="true"] {
+    color: #00ff88;
+}
+
+.col-irating[data-ir-mid="true"] {
+    color: #00d4ff;
+}
+
+/* Performance optimizations */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.standings-container * {
+    box-sizing: border-box;
+}

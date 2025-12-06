@@ -1,0 +1,16 @@
+{
+    "name": "standings",
+    "display_name": "Race Standings",
+    "description": "Displays relative race standings with position, driver name, class, license, iRating, and time intervals",
+    "resolution": {
+        "width": 600,
+        "height": 800
+    },
+    "position": {
+        "x": 100,
+        "y": 100
+    },
+    "dpi_info": {
+        "scale": 1.0
+    }
+}
