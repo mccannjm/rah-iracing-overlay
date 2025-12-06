@@ -7,43 +7,85 @@ from pathlib import Path
 import eventlet
 
 # Define the base directory
-base_dir = os.path.abspath(os.path.dirname('src'))
-if os.path.basename(os.getcwd()) == 'src':
-    base_dir = os.getcwd()
-else:
-    base_dir = os.path.join(os.getcwd(), 'src')
+# The spec file is in src/config/, so we need to go up two levels to get to repo root
+spec_root = os.path.dirname(SPECPATH)  # Gets src/ directory
+base_dir = spec_root  # This is the src/ directory where app.py lives
+
+print(f"Spec file location (SPECPATH): {SPECPATH}")
+print(f"Base directory (src/): {base_dir}")
+print(f"Current working directory: {os.getcwd()}")
 
 # Define directories for data files
 overlays_dir = os.path.join(base_dir, 'overlays')
 interface_dir = os.path.join(base_dir, 'interface')
 common_dir = os.path.join(base_dir, 'common')
 
+# Verify directories exist
+for dir_name, dir_path in [('overlays', overlays_dir), ('interface', interface_dir), ('common', common_dir)]:
+    if os.path.exists(dir_path):
+        print(f"Found {dir_name} directory: {dir_path}")
+    else:
+        print(f"WARNING: {dir_name} directory not found at: {dir_path}")
+
 # Get all data files
 datas = []
 
+# Files and directories to skip
+skip_patterns = ['__pycache__', '.pyc', '.pyo', '.git', '.gitignore', '.DS_Store', 'Thumbs.db']
+
+def should_skip(path):
+    """Check if a file or directory should be skipped"""
+    for pattern in skip_patterns:
+        if pattern in path:
+            return True
+    return False
+
 # Add overlays files
 for root, dirs, files in os.walk(overlays_dir):
+    # Skip __pycache__ directories
+    dirs[:] = [d for d in dirs if not should_skip(d)]
+
     for file in files:
         src_path = os.path.join(root, file)
+        if should_skip(src_path):
+            continue
+        # Use absolute path for source, relative path for destination
+        src_abs = os.path.abspath(src_path)
         rel_path = os.path.relpath(src_path, base_dir)
         dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
+        datas.append((src_abs, dst_path))
 
 # Add interface files
 for root, dirs, files in os.walk(interface_dir):
+    # Skip __pycache__ directories
+    dirs[:] = [d for d in dirs if not should_skip(d)]
+
     for file in files:
         src_path = os.path.join(root, file)
+        if should_skip(src_path):
+            continue
+        # Use absolute path for source, relative path for destination
+        src_abs = os.path.abspath(src_path)
         rel_path = os.path.relpath(src_path, base_dir)
         dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
+        datas.append((src_abs, dst_path))
 
 # Add common files
 for root, dirs, files in os.walk(common_dir):
+    # Skip __pycache__ directories
+    dirs[:] = [d for d in dirs if not should_skip(d)]
+
     for file in files:
         src_path = os.path.join(root, file)
+        if should_skip(src_path):
+            continue
+        # Use absolute path for source, relative path for destination
+        src_abs = os.path.abspath(src_path)
         rel_path = os.path.relpath(src_path, base_dir)
         dst_path = os.path.dirname(rel_path)
-        datas.append((rel_path, dst_path))
+        datas.append((src_abs, dst_path))
+
+print(f"Total data files to include: {len(datas)}")
 
 block_cipher = None
 
