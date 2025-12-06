@@ -4,6 +4,14 @@ import logging
 import yaml
 from typing import Dict, List, Optional, Union, Any
 
+# Import tire prediction system
+try:
+    from tire_predictor import TirePredictor
+    TIRE_PREDICTION_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Tire prediction not available: {e}")
+    TIRE_PREDICTION_AVAILABLE = False
+
 class DataProvider:
     """
     Provides telemetry data from iRacing.
@@ -19,6 +27,21 @@ class DataProvider:
         self.ir_sdk = irsdk.IRSDK()
         self.is_connected = False
         self.lap_times: List[float] = []
+
+        # Tire prediction system
+        self.tire_predictor = None
+        if TIRE_PREDICTION_AVAILABLE:
+            try:
+                self.tire_predictor = TirePredictor()
+                logging.info("Tire prediction system initialized")
+            except Exception as e:
+                logging.error(f"Error initializing tire predictor: {e}")
+
+        # Session tracking for predictor
+        self.current_session_num = -1
+        self.current_car_name = None
+        self.current_track_name = None
+
         logging.debug(f"DataProvider initialized. Current working directory: {os.getcwd()}")
 
     def connect(self) -> bool:
@@ -644,3 +667,206 @@ class DataProvider:
                 if temp is not None and temp > 0:
                     return True
         return False
+
+    def get_tire_predictions(self) -> Dict[str, Any]:
+        """
+        Get tire temperature predictions from prediction system.
+
+        Returns:
+            Dict with predicted temps, confidence, trends, and advice
+        """
+        if not self.tire_predictor or not self.is_connected:
+            return {}
+
+        try:
+            # Check for session changes
+            self._check_session_change()
+
+            # Get current telemetry for prediction
+            telemetry = self._extract_prediction_telemetry()
+
+            if not telemetry:
+                return {}
+
+            # Get predictions
+            predictions = self.tire_predictor.predict(telemetry)
+
+            # If in pit, calibrate with actual temps
+            if self.ir_sdk['OnPitRoad']:
+                actual_temps = self._get_actual_temps()
+                if actual_temps:
+                    self.tire_predictor.calibrate_with_actual(actual_temps)
+                    # Include actual temps in response
+                    predictions['actual_temps'] = actual_temps
+                    predictions['in_pit'] = True
+            else:
+                predictions['in_pit'] = False
+
+            return predictions
+
+        except Exception as e:
+            logging.error(f"Error getting tire predictions: {e}")
+            return {}
+
+    def _check_session_change(self) -> None:
+        """Check if session has changed and update prediction session."""
+        try:
+            session_num = int(self.ir_sdk['SessionNum'] or -1)
+
+            # Session changed?
+            if session_num != self.current_session_num:
+                # End old session
+                if self.current_session_num >= 0 and self.tire_predictor:
+                    logging.info(f"Session ended: {self.current_session_num}")
+                    self.tire_predictor.end_session()
+
+                # Start new session
+                if session_num >= 0:
+                    car_name = self._get_car_name()
+                    track_name = self._get_track_name()
+
+                    if car_name and track_name and self.tire_predictor:
+                        self.tire_predictor.start_session(car_name, track_name)
+                        self.current_car_name = car_name
+                        self.current_track_name = track_name
+                        logging.info(f"Session started: {car_name} @ {track_name}")
+
+                self.current_session_num = session_num
+
+        except Exception as e:
+            logging.error(f"Error checking session change: {e}")
+
+    def _get_car_name(self) -> Optional[str]:
+        """Get current car name from SessionInfo."""
+        try:
+            player_idx = int(self.ir_sdk['PlayerCarIdx'])
+            session_info = self.ir_sdk['SessionInfo']
+
+            if isinstance(session_info, dict):
+                info = session_info
+            else:
+                info = yaml.safe_load(session_info or "") or {}
+
+            drivers = info.get('DriverInfo', {}).get('Drivers', [])
+            for driver in drivers:
+                if int(driver.get('CarIdx', -1)) == player_idx:
+                    return driver.get('CarScreenName', 'Unknown')
+
+            return None
+        except:
+            return None
+
+    def _get_track_name(self) -> Optional[str]:
+        """Get current track name from SessionInfo."""
+        try:
+            session_info = self.ir_sdk['SessionInfo']
+
+            if isinstance(session_info, dict):
+                info = session_info
+            else:
+                info = yaml.safe_load(session_info or "") or {}
+
+            weekend_info = info.get('WeekendInfo', {})
+            return weekend_info.get('TrackDisplayName', 'Unknown')
+
+        except:
+            return None
+
+    def _extract_prediction_telemetry(self) -> Optional[Dict]:
+        """
+        Extract telemetry data for tire prediction.
+
+        Similar to _extract_telemetry but includes all fields needed for prediction.
+        """
+        try:
+            self.ir_sdk.freeze_var_buffer_latest()
+
+            # Reuse existing extraction methods
+            telemetry_data = self._extract_data()
+
+            # Add additional fields for prediction
+            telemetry_data['lap_num'] = int(self.ir_sdk['Lap'] or 0)
+            telemetry_data['lap_pct'] = float(self.ir_sdk['LapDistPct'] or 0.0)
+
+            # Calculate stint time
+            session_time = float(self.ir_sdk['SessionTime'] or 0.0)
+            # For now, use session time as stint time (could track pit stops for accuracy)
+            telemetry_data['stint_time'] = session_time
+
+            # Add structured data expected by predictor
+            telemetry_data['timestamp'] = __import__('time').time()
+
+            telemetry_data['inputs'] = {
+                'throttle': telemetry_data.get('throttle', 0.0),
+                'brake': telemetry_data.get('brake', 0.0),
+                'clutch': telemetry_data.get('clutch', 0.0),
+                'steering': telemetry_data.get('steering_wheel_angle', 0.0),
+                'speed': telemetry_data.get('speed', 0.0)
+            }
+
+            telemetry_data['g_forces'] = {
+                'lateral': float(self.ir_sdk['LatAccel'] or 0.0),
+                'longitudinal': float(self.ir_sdk['LongAccel'] or 0.0),
+                'vertical': float(self.ir_sdk['VertAccel'] or 0.0)
+            }
+
+            telemetry_data['loads'] = {
+                'LF_shock': float(self.ir_sdk['LFshockDefl'] or 0.0),
+                'RF_shock': float(self.ir_sdk['RFshockDefl'] or 0.0),
+                'LR_shock': float(self.ir_sdk['LRshockDefl'] or 0.0),
+                'RR_shock': float(self.ir_sdk['RRshockDefl'] or 0.0)
+            }
+
+            telemetry_data['environment'] = {
+                'track_temp': float(self.ir_sdk['TrackTempCrew'] or 75.0),
+                'air_temp': float(self.ir_sdk['AirTemp'] or 70.0)
+            }
+
+            telemetry_data['tire_wear'] = {
+                'LF': (float(self.ir_sdk['LFwearL'] or 0.0) +
+                       float(self.ir_sdk['LFwearM'] or 0.0) +
+                       float(self.ir_sdk['LFwearR'] or 0.0)) / 3.0,
+                'RF': (float(self.ir_sdk['RFwearL'] or 0.0) +
+                       float(self.ir_sdk['RFwearM'] or 0.0) +
+                       float(self.ir_sdk['RFwearR'] or 0.0)) / 3.0,
+                'LR': (float(self.ir_sdk['LRwearL'] or 0.0) +
+                       float(self.ir_sdk['LRwearM'] or 0.0) +
+                       float(self.ir_sdk['LRwearR'] or 0.0)) / 3.0,
+                'RR': (float(self.ir_sdk['RRwearL'] or 0.0) +
+                       float(self.ir_sdk['RRwearM'] or 0.0) +
+                       float(self.ir_sdk['RRwearR'] or 0.0)) / 3.0
+            }
+
+            return telemetry_data
+
+        except Exception as e:
+            logging.error(f"Error extracting prediction telemetry: {e}")
+            return None
+
+    def _get_actual_temps(self) -> Optional[Dict]:
+        """Get actual tire temperatures (when in pit)."""
+        try:
+            return {
+                'LF': {
+                    'L': float(self.ir_sdk['LFtempCL'] or 0.0),
+                    'C': float(self.ir_sdk['LFtempCM'] or 0.0),
+                    'R': float(self.ir_sdk['LFtempCR'] or 0.0)
+                },
+                'RF': {
+                    'L': float(self.ir_sdk['RFtempCL'] or 0.0),
+                    'C': float(self.ir_sdk['RFtempCM'] or 0.0),
+                    'R': float(self.ir_sdk['RFtempCR'] or 0.0)
+                },
+                'LR': {
+                    'L': float(self.ir_sdk['LRtempCL'] or 0.0),
+                    'C': float(self.ir_sdk['LRtempCM'] or 0.0),
+                    'R': float(self.ir_sdk['LRtempCR'] or 0.0)
+                },
+                'RR': {
+                    'L': float(self.ir_sdk['RRtempCL'] or 0.0),
+                    'C': float(self.ir_sdk['RRtempCM'] or 0.0),
+                    'R': float(self.ir_sdk['RRtempCR'] or 0.0)
+                }
+            }
+        except:
+            return None

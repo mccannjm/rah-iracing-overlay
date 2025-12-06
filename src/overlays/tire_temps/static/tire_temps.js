@@ -16,10 +16,19 @@ let config = {
         enabled: true,
         dismissible: true,
         permanently_dismissed: false
+    },
+    prediction: {
+        enabled: true,
+        display_mode: 'detailed',  // 'detailed', 'at-a-glance', 'visual'
+        show_trends: true,
+        show_advice: true,
+        show_confidence: true
     }
 };
 
 let reminderDismissed = false;
+let currentPredictions = null;
+let currentActualData = null;
 
 // Socket.IO connection events
 socket.on('connect', () => {
@@ -31,22 +40,44 @@ socket.on('disconnect', () => {
     showNoDataState();
 });
 
-// Listen for tire data updates
+// Listen for tire data updates (actual temps from pit)
 socket.on('tire_data_update', (data) => {
     if (!data) {
         showNoDataState();
         return;
     }
 
-    updateTireDisplay(data);
+    currentActualData = data;
+    updateTireDisplay(data, null);
     handleReminderVisibility(data);
 });
 
-function updateTireDisplay(data) {
+// Listen for tire prediction updates
+socket.on('tire_predictions_update', (data) => {
+    if (!data || !config.prediction.enabled) {
+        return;
+    }
+
+    currentPredictions = data;
+
+    // If we don't have actual data, use predictions
+    if (!currentActualData || !currentActualData.data_available) {
+        updateTireDisplay(null, data);
+    } else {
+        // We have actual data, but still update trends and advice
+        updatePredictionInfo(data);
+    }
+});
+
+function updateTireDisplay(actualData, predictionData) {
     const tireDisplay = document.getElementById('tire-display');
     const noDataState = document.getElementById('no-data-state');
 
-    if (!data || !data.data_available) {
+    // Determine which data to use
+    const useActual = actualData && actualData.data_available;
+    const usePrediction = !useActual && predictionData;
+
+    if (!useActual && !usePrediction) {
         showNoDataState();
         return;
     }
@@ -55,27 +86,48 @@ function updateTireDisplay(data) {
     noDataState.style.display = 'none';
     tireDisplay.style.display = 'block';
 
-    // Update temperatures for each tire
     const tires = ['LF', 'RF', 'LR', 'RR'];
     const zones = ['L', 'C', 'R'];
 
+    // Update temperatures for each tire
     tires.forEach(tire => {
         zones.forEach(zone => {
-            const temp = data.temperatures?.[tire]?.[zone];
-            updateZoneTemp(tire, zone, temp);
+            if (useActual) {
+                const temp = actualData.temperatures?.[tire]?.[zone];
+                updateZoneTemp(tire, zone, temp, false, null);
+            } else if (usePrediction) {
+                const temp = predictionData.temps?.[tire]?.[zone];
+                updateZoneTemp(tire, zone, temp, true, null);
+            }
         });
 
-        // Update pressure
-        if (data.pressure && config.show_pressure) {
-            const pressure = data.pressure[tire];
+        // Update trend for tire (shown in label)
+        if (usePrediction && config.prediction.show_trends) {
+            const trend = predictionData.trends?.[tire];
+            updateTireTrend(tire, trend);
+        } else {
+            updateTireTrend(tire, null);
+        }
+
+        // Update confidence border for predictions
+        if (usePrediction && config.prediction.show_confidence) {
+            const confidence = predictionData.confidence || 0;
+            updateTireConfidence(tire, confidence);
+        } else {
+            // Reset confidence border
+            updateTireConfidence(tire, null);
+        }
+
+        // Update pressure (only from actual data)
+        if (useActual && actualData.pressure && config.show_pressure) {
+            const pressure = actualData.pressure[tire];
             updatePressure(tire, pressure);
         }
 
-        // Update wear
-        if (data.wear && config.show_wear) {
-            const wearZones = zone === 'C' ? 'M' : zone;
+        // Update wear (only from actual data)
+        if (useActual && actualData.wear && config.show_wear) {
             ['L', 'M', 'R'].forEach(wearZone => {
-                const wear = data.wear[tire]?.[wearZone];
+                const wear = actualData.wear[tire]?.[wearZone];
                 updateWear(tire, wearZone, wear);
             });
         }
@@ -83,16 +135,27 @@ function updateTireDisplay(data) {
 
     // Update status
     const statusElement = document.getElementById('data-status');
-    if (data.in_pit) {
-        statusElement.textContent = 'In Pit - Live Data';
-        statusElement.style.color = '#2ecc71';
-    } else {
-        statusElement.textContent = 'On Track - Limited Data';
-        statusElement.style.color = '#f39c12';
+    if (useActual) {
+        if (actualData.in_pit) {
+            statusElement.textContent = 'In Pit - Live Data';
+            statusElement.style.color = '#2ecc71';
+        } else {
+            statusElement.textContent = 'On Track - Limited Data';
+            statusElement.style.color = '#f39c12';
+        }
+    } else if (usePrediction) {
+        const confidence = Math.round((predictionData.confidence || 0) * 100);
+        statusElement.textContent = `Predicted Temps (${confidence}% confidence)`;
+        statusElement.style.color = getConfidenceColor(predictionData.confidence);
+    }
+
+    // Update prediction info (trends and advice)
+    if (predictionData) {
+        updatePredictionInfo(predictionData);
     }
 }
 
-function updateZoneTemp(tire, zone, temp) {
+function updateZoneTemp(tire, zone, temp, isPrediction) {
     const tempElement = document.getElementById(`temp-${tire}-${zone}`);
 
     if (!tempElement) return;
@@ -113,7 +176,28 @@ function updateZoneTemp(tire, zone, temp) {
 
     // Apply color coding based on temperature ranges
     const tempClass = getTempClass(temp);
-    tempElement.className = `temp-value ${tempClass}`;
+    let className = `temp-value ${tempClass}`;
+
+    // Add prediction class if showing predicted temps
+    if (isPrediction) {
+        className += ' temp-predicted';
+    }
+
+    tempElement.className = className;
+}
+
+function updateTireTrend(tire, trend) {
+    const tireLabel = document.querySelector(`.tire-quadrant[data-tire="${tire}"] .tire-label`);
+    if (!tireLabel) return;
+
+    if (!trend || !trend.symbol) {
+        // Reset to just tire name
+        tireLabel.textContent = tire;
+        return;
+    }
+
+    // Add trend symbol next to tire name
+    tireLabel.textContent = `${tire} ${trend.symbol}`;
 }
 
 function getTempClass(temp) {
@@ -173,6 +257,59 @@ function showNoDataState() {
 
     tireDisplay.style.display = 'none';
     noDataState.style.display = 'flex';
+}
+
+function updateTireConfidence(tire, confidence) {
+    const tireQuadrant = document.querySelector(`.tire-quadrant[data-tire="${tire}"]`);
+    if (!tireQuadrant) return;
+
+    if (confidence === null || confidence === undefined) {
+        // Reset to default border
+        tireQuadrant.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        tireQuadrant.style.boxShadow = 'none';
+        return;
+    }
+
+    // Set border color based on confidence
+    const color = getConfidenceColor(confidence);
+    tireQuadrant.style.borderColor = color;
+    tireQuadrant.style.boxShadow = `0 0 15px ${color}40`;  // 40 = 25% opacity in hex
+}
+
+function getConfidenceColor(confidence) {
+    if (confidence >= 0.8) {
+        return '#2ecc71';  // Green
+    } else if (confidence >= 0.5) {
+        return '#f39c12';  // Yellow/Orange
+    } else if (confidence >= 0.2) {
+        return '#e67e22';  // Orange
+    } else {
+        return '#e74c3c';  // Red
+    }
+}
+
+function updatePredictionInfo(predictionData) {
+    if (!predictionData) return;
+
+    // Update advice if enabled
+    if (config.prediction.show_advice) {
+        updateAdvice(predictionData.advice || []);
+    }
+}
+
+function updateAdvice(adviceList) {
+    const adviceContainer = document.getElementById('advice-container');
+    if (!adviceContainer) return;
+
+    if (!adviceList || adviceList.length === 0) {
+        adviceContainer.style.display = 'none';
+        return;
+    }
+
+    adviceContainer.style.display = 'block';
+    adviceContainer.innerHTML = adviceList.map(advice =>
+        `<div class="advice-item">${advice}</div>`
+    ).join('');
 }
 
 function handleReminderVisibility(data) {

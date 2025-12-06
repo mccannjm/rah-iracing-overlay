@@ -267,3 +267,67 @@ body {
     font-size: 0.95em;
     font-weight: 500;
 }
+
+/* Prediction Styles */
+.temp-predicted {
+    font-style: italic;
+    opacity: 0.95;
+    position: relative;
+}
+
+.temp-predicted::after {
+    content: '~';
+    position: absolute;
+    right: -12px;
+    top: 0;
+    font-size: 0.8em;
+    opacity: 0.5;
+}
+
+/* Confidence Border Colors - Applied dynamically via JS */
+.tire-quadrant.confidence-high {
+    border-color: #2ecc71;
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
+}
+
+.tire-quadrant.confidence-medium {
+    border-color: #f39c12;
+    box-shadow: 0 0 15px rgba(243, 156, 18, 0.3);
+}
+
+.tire-quadrant.confidence-low {
+    border-color: #e67e22;
+    box-shadow: 0 0 15px rgba(230, 126, 34, 0.3);
+}
+
+.tire-quadrant.confidence-very-low {
+    border-color: #e74c3c;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+}
+
+/* Advice Container */
+.advice-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(30, 30, 30, 0.9);
+    border-radius: 8px;
+    border-left: 4px solid #f39c12;
+}
+
+.advice-item {
+    padding: 8px 0;
+    font-size: 0.95em;
+    color: #f39c12;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.advice-item:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.advice-item::before {
+    content: '💡';
+    font-size: 1.2em;
+}

@@ -330,13 +330,21 @@ class WebInterface:
                     except Exception as e:
                         logging.error(f"Error in standings processing: {e}")
 
-                # Get tire temperature data
+                # Get tire temperature data (actual temps when available)
                 tire_data = self.data_provider.get_tire_data()
                 if tire_data:
                     try:
                         self.socketio.emit('tire_data_update', tire_data, namespace='/tire_temps')
                     except Exception as e:
                         logging.error(f"Error in tire temps processing: {e}")
+
+                # Get tire temperature predictions (always available)
+                tire_predictions = self.data_provider.get_tire_predictions()
+                if tire_predictions:
+                    try:
+                        self.socketio.emit('tire_predictions_update', tire_predictions, namespace='/tire_temps')
+                    except Exception as e:
+                        logging.error(f"Error in tire predictions processing: {e}")
 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")
