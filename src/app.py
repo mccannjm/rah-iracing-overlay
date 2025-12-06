@@ -39,16 +39,16 @@ if platform.system() == 'Windows':
     logging.info("Windows detected - configured eventlet settings")
 
 try:
-    from web_interface import WebInterface, using_fallback_mode
-    logging.info("Successfully imported web_interface")
+    from core.web_interface import WebInterface, using_fallback_mode
+    logging.info("Successfully imported web_interface from core")
 except Exception as e:
     logging.error(f"Failed to import web_interface: {e}")
     logging.error(traceback.format_exc())
     raise
 
 try:
-    from overlay_window import OverlayWindow
-    logging.info("Successfully imported overlay_window")
+    from core.overlay_window import OverlayWindow
+    logging.info("Successfully imported overlay_window from core")
 except Exception as e:
     logging.error(f"Failed to import overlay_window: {e}")
     logging.error(traceback.format_exc())
