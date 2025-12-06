@@ -26,6 +26,7 @@ class DataProvider:
         """
         self.ir_sdk = irsdk.IRSDK()
         self.is_connected = False
+        self.last_connection_state = False  # Track state changes to avoid log spam
         self.lap_times: List[float] = []
 
         # Tire prediction system
@@ -43,20 +44,25 @@ class DataProvider:
         self.current_track_name = None
 
         logging.debug(f"DataProvider initialized. Current working directory: {os.getcwd()}")
+        logging.info("Waiting for iRacing to start...")
 
     def connect(self) -> bool:
         """
         Establish connection to iRacing.
-        
+
         Returns:
             bool: True if connection was successful, False otherwise
         """
         if not self.is_connected:
             self.is_connected = self.ir_sdk.startup()
-            if self.is_connected:
+
+            # Only log when connection state changes to avoid spam
+            if self.is_connected and not self.last_connection_state:
                 logging.info("Connected to iRacing")
-            else:
-                logging.warning("Failed to connect to iRacing")
+                self.last_connection_state = True
+            elif not self.is_connected and self.last_connection_state:
+                logging.info("Disconnected from iRacing")
+                self.last_connection_state = False
         return self.is_connected
 
     def disconnect(self) -> None:

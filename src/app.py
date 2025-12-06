@@ -8,16 +8,46 @@ from datetime import datetime
 # Setup logging to file before anything else
 log_dir = os.path.join(os.path.expanduser('~'), 'RAH_Telemetry_Overlay_Logs')
 os.makedirs(log_dir, exist_ok=True)
+
+# Clean up old log files - keep only the most recent 5
+def cleanup_old_logs(log_directory, keep_count=5):
+    """Remove old log files, keeping only the most recent ones"""
+    try:
+        log_files = []
+        for f in os.listdir(log_directory):
+            if f.startswith('app_log_') and f.endswith('.txt'):
+                file_path = os.path.join(log_directory, f)
+                log_files.append((file_path, os.path.getmtime(file_path)))
+
+        # Sort by modification time (newest first)
+        log_files.sort(key=lambda x: x[1], reverse=True)
+
+        # Delete old files beyond keep_count
+        for file_path, _ in log_files[keep_count:]:
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass  # Ignore errors when deleting old logs
+    except Exception:
+        pass  # Don't let log cleanup crash the app
+
+cleanup_old_logs(log_dir)
+
 log_file = os.path.join(log_dir, f'app_log_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt')
 
-# Configure logging to both file and console
+# Configure logging with different levels for file and console
+# File gets INFO level (detailed), console gets WARNING level (errors only)
+file_handler = logging.FileHandler(log_file, encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.WARNING)  # Only show warnings and errors in console
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file, encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    level=logging.INFO,  # Root logger at INFO to capture everything
+    handlers=[file_handler, console_handler]
 )
 
 logging.info("="*60)
