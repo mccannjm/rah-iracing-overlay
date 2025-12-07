@@ -5,11 +5,13 @@ document.addEventListener("DOMContentLoaded", function() {
         carsBehind: 5,
         alwaysShowLeader: true,
         updateThrottle: 100, // ms between UI updates
+        timingUpdateThrottle: 50, // faster updates for timing data
     };
 
     // State
     let socket = null;
     let lastUpdate = 0;
+    let lastTimingUpdate = 0;
     let currentData = null;
     let lapTimingData = null;
     let isConnected = false;
@@ -92,13 +94,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
 
-            // Throttle UI updates
+            // Throttle UI updates (faster for timing data)
             const now = Date.now();
-            if (now - lastUpdate >= CONFIG.updateThrottle) {
+            if (now - lastTimingUpdate >= CONFIG.timingUpdateThrottle) {
                 if (currentMode === 'lap_timing') {
                     updateLapTiming(data);
                 }
-                lastUpdate = now;
+                lastTimingUpdate = now;
             }
         });
 

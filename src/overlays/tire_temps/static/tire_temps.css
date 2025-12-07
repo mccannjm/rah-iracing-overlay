@@ -184,7 +184,7 @@ html, body {
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 3px;
     padding: 4px 3px;
     position: relative;

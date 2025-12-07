@@ -117,6 +117,8 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Custom scrollbar */
@@ -317,7 +319,7 @@ html, body {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    min-height: 100%;
+    flex: 1;
 }
 
 .timing-section {
