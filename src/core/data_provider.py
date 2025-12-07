@@ -203,7 +203,7 @@ class DataProvider:
             "front_best_lap_time": round(front_best, 3),
             "target_pace":          round(lap_delta, 3),
             "lap_delta":         round(best_delta, 3),
-            "session_type":        "practice",
+            "session_type":        session_type,
         }
 
     

@@ -39,7 +39,7 @@ html, body {
     justify-content: space-between;
     align-items: center;
     padding: 6px 10px;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     border-bottom: 2px solid rgba(255, 255, 255, 0.2);
     gap: 10px;
 }
@@ -72,7 +72,7 @@ html, body {
     font-weight: 700;
     letter-spacing: 0.4px;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 
 /* Column alignment */
@@ -463,6 +463,78 @@ html, body {
 .standings-container.size-normal .timing-row {
     padding: 8px 6px;
     font-size: 13px;
+}
+
+/* Session-based automatic sizing */
+/* Practice/Qualifying mode - compact and hide iRating/License columns */
+.standings-container.session-practice .col-license,
+.standings-container.session-practice .col-irating,
+.standings-container.session-qualifying .col-license,
+.standings-container.session-qualifying .col-irating {
+    display: none;
+}
+
+.standings-container.session-practice .standings-table-header,
+.standings-container.session-practice .standing-row,
+.standings-container.session-qualifying .standings-table-header,
+.standings-container.session-qualifying .standing-row {
+    grid-template-columns: 35px 1fr 55px 85px 85px 45px;
+}
+
+.standings-container.session-practice,
+.standings-container.session-qualifying {
+    padding: 8px;
+}
+
+.standings-container.session-practice .standings-header,
+.standings-container.session-qualifying .standings-header {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+}
+
+.standings-container.session-practice .header-title,
+.standings-container.session-qualifying .header-title {
+    font-size: 14px;
+}
+
+.standings-container.session-practice .session-info,
+.standings-container.session-qualifying .session-info {
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
+.standings-container.session-practice .standings-table-header,
+.standings-container.session-qualifying .standings-table-header {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    font-size: 9px;
+}
+
+.standings-container.session-practice .standing-row,
+.standings-container.session-qualifying .standing-row {
+    padding: 6px 8px;
+    margin-bottom: 1px;
+    font-size: 11px;
+}
+
+/* Race mode - expanded with all info */
+.standings-container.session-race {
+    padding: 10px;
+}
+
+.standings-container.session-race .standings-header {
+    padding: 6px 10px;
+    margin-bottom: 2px;
+}
+
+.standings-container.session-race .standings-table-header {
+    padding: 6px 10px;
+    margin-bottom: 2px;
+}
+
+.standings-container.session-race .standing-row {
+    padding: 8px 10px;
+    margin-bottom: 2px;
 }
 
 /* Performance optimizations */

@@ -116,6 +116,25 @@ document.addEventListener("DOMContentLoaded", function() {
         statusText.textContent = text;
     }
 
+    // Update session-based CSS class for automatic sizing
+    function updateSessionClass(sessionType) {
+        const container = document.querySelector('.standings-container');
+        if (!container) return;
+
+        // Remove all session classes
+        container.classList.remove('session-race', 'session-practice', 'session-qualifying', 'session-qualify');
+
+        // Add the appropriate session class
+        const sessionLower = sessionType.toLowerCase();
+        if (sessionLower === 'race') {
+            container.classList.add('session-race');
+        } else if (sessionLower === 'practice') {
+            container.classList.add('session-practice');
+        } else if (sessionLower === 'qualifying' || sessionLower === 'qualify') {
+            container.classList.add('session-qualifying');
+        }
+    }
+
     // Update standings display
     function updateStandings(data) {
         // Validate data structure
@@ -127,6 +146,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Update session type
         if (data.session_type) {
             sessionInfo.textContent = data.session_type.toUpperCase();
+            // Apply session-based sizing class
+            updateSessionClass(data.session_type);
         }
 
         // Filter standings for relative view
@@ -340,6 +361,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Update session type
         if (data.session_type) {
             sessionInfo.textContent = data.session_type.toUpperCase();
+            // Apply session-based sizing class
+            updateSessionClass(data.session_type);
         }
 
         // Check if timing container already exists
