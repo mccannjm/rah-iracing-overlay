@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", function() {
     // Track connection status
     let isConnected = false;
     let reconnectTimer = null;
+    let animationFrameId = null;
+    let hasData = false;
 
     const canvas = document.getElementById("telemetry-graph");
     const ctx = canvas.getContext("2d");
@@ -24,10 +26,11 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log("Connected to telemetry namespace");
         isConnected = true;
         clearTimeout(reconnectTimer);
+        startAnimation();
     });
 
     socket.on('telemetry_update', function(data) {
-        console.log("Received telemetry update");
+        hasData = true;
         updateTelemetryData(data);
     });
 
@@ -39,7 +42,9 @@ document.addEventListener("DOMContentLoaded", function() {
     socket.on('disconnect', function() {
         console.log("Disconnected from telemetry namespace");
         isConnected = false;
-        
+        hasData = false;
+        stopAnimation();
+
         // Try to reconnect manually if socket.io reconnection fails
         reconnectTimer = setTimeout(function() {
             if (!isConnected) {
@@ -133,9 +138,28 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function animate() {
-        drawGraph();
-        requestAnimationFrame(animate);
+        // Only continue animation if connected and receiving data
+        if (isConnected && hasData) {
+            drawGraph();
+            animationFrameId = requestAnimationFrame(animate);
+        } else {
+            animationFrameId = null;
+        }
     }
 
-    requestAnimationFrame(animate);
+    function startAnimation() {
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(animate);
+        }
+    }
+
+    function stopAnimation() {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    }
+
+    // Start initial animation (will only draw when data arrives)
+    startAnimation();
 });

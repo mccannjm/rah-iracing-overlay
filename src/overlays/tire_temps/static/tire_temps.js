@@ -1,5 +1,11 @@
 // Tire Temperatures Overlay
-const socket = io('/tire_temps');
+const socket = io('/tire_temps', {
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000
+});
 
 let config = {
     temperature_unit: 'F',
@@ -30,14 +36,41 @@ let reminderDismissed = false;
 let currentPredictions = null;
 let currentActualData = null;
 
+// Track connection status
+let isConnected = false;
+let reconnectTimer = null;
+
 // Socket.IO connection events
 socket.on('connect', () => {
     console.log('Connected to tire temps namespace');
+    isConnected = true;
+    clearTimeout(reconnectTimer);
 });
 
 socket.on('disconnect', () => {
     console.log('Disconnected from tire temps namespace');
+    isConnected = false;
     showNoDataState();
+
+    // Try to reconnect manually if socket.io reconnection fails
+    reconnectTimer = setTimeout(() => {
+        if (!isConnected) {
+            console.log('Manually attempting to reconnect...');
+            socket.connect();
+        }
+    }, 3000);
+});
+
+socket.on('error', (error) => {
+    console.error('Socket error:', error);
+});
+
+socket.on('reconnect_attempt', () => {
+    console.log('Attempting to reconnect...');
+});
+
+socket.on('reconnect', (attemptNumber) => {
+    console.log('Reconnected after', attemptNumber, 'attempts');
 });
 
 // Listen for tire data updates (actual temps from pit)

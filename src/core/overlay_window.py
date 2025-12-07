@@ -177,21 +177,47 @@ class OverlayWindow:
         self.position_tracker_thread.start()
     
     def track_window_position(self):
-        """Continuously track window position and expose it to the window."""
+        """Continuously track window position and expose it to the window.
+
+        Uses adaptive polling rate:
+        - Fast (4Hz) when position has recently changed (user might be dragging)
+        - Slow (1Hz) when position is stable
+        """
         if not self.window:
             return
-            
+
         try:
             time.sleep(1)
             self._inject_dpi_scale_info()
-            
+
+            last_position = None
+            stable_count = 0
+            STABLE_THRESHOLD = 5  # After 5 unchanged polls, switch to slow mode
+
             while self.window and not self.window_closed.is_set():
                 try:
-                    self._update_position_in_window()
+                    current_pos = (self.window.x, self.window.y)
+
+                    # Check if position changed
+                    if current_pos != last_position:
+                        stable_count = 0
+                        last_position = current_pos
+                        self._update_position_in_window()
+                    else:
+                        stable_count += 1
+                        # Only update JS occasionally when stable
+                        if stable_count % 4 == 0:
+                            self._update_position_in_window()
+
                 except Exception as e:
                     logging.error(f"Error updating position in JavaScript: {e}")
-                    
-                time.sleep(0.1)
+
+                # Adaptive sleep: fast when moving, slow when stable
+                if stable_count < STABLE_THRESHOLD:
+                    time.sleep(0.25)  # 4Hz when position might be changing
+                else:
+                    time.sleep(1.0)   # 1Hz when position is stable
+
         except Exception as e:
             logging.error(f"Error in position tracker thread: {e}")
     

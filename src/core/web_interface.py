@@ -60,6 +60,29 @@ from interface import interface_bp
 from overlays import overlays_bp
 
 
+def create_namespace_class(namespace_name: str):
+    """
+    Factory function to create Socket.IO namespace classes.
+
+    Reduces code duplication by generating namespace classes dynamically
+    instead of defining nearly-identical classes for each overlay.
+
+    Args:
+        namespace_name: Human-readable name for logging (e.g., "telemetry", "standings")
+
+    Returns:
+        A Namespace subclass configured for the given overlay
+    """
+    class DynamicNamespace(Namespace):
+        def on_connect(self) -> None:
+            logging.info(f"Client connected to {namespace_name} namespace")
+
+        def on_disconnect(self) -> None:
+            logging.info(f"Client disconnected from {namespace_name} namespace")
+
+    return DynamicNamespace
+
+
 def resource_path(relative_path: str) -> str:
     """
     Get absolute path to resource, works for dev and for PyInstaller.
@@ -75,56 +98,6 @@ def resource_path(relative_path: str) -> str:
     except Exception:
         base_path = os.path.abspath(os.path.dirname(__file__))
     return os.path.join(base_path, relative_path)
-
-
-class TelemetryNamespace(Namespace):
-    """Socket.IO namespace for telemetry data."""
-    
-    def on_connect(self) -> None:
-        """Handle client connection to telemetry namespace."""
-        print("Client connected to telemetry namespace")
-        logging.info("Client connected to telemetry namespace")
-
-    def on_disconnect(self) -> None:
-        """Handle client disconnection from telemetry namespace."""
-        print("Client disconnected from telemetry namespace")
-        logging.info("Client disconnected from telemetry namespace")
-
-
-class DriverInFrontNamespace(Namespace):
-    """Socket.IO namespace for driver in front data."""
-
-    def on_connect(self) -> None:
-        """Handle client connection to driver in front namespace."""
-        logging.info("Client connected to driver in front namespace")
-
-    def on_disconnect(self) -> None:
-        """Handle client disconnection from driver in front namespace."""
-        logging.info("Client disconnected from driver in front namespace")
-
-
-class StandingsNamespace(Namespace):
-    """Socket.IO namespace for standings data."""
-
-    def on_connect(self) -> None:
-        """Handle client connection to standings namespace."""
-        logging.info("Client connected to standings namespace")
-
-    def on_disconnect(self) -> None:
-        """Handle client disconnection from standings namespace."""
-        logging.info("Client disconnected from standings namespace")
-
-
-class TireTempsNamespace(Namespace):
-    """Socket.IO namespace for tire temperature data."""
-
-    def on_connect(self) -> None:
-        """Handle client connection to tire temps namespace."""
-        logging.info("Client connected to tire temps namespace")
-
-    def on_disconnect(self) -> None:
-        """Handle client disconnection from tire temps namespace."""
-        logging.info("Client disconnected from tire temps namespace")
 
 
 class WebInterface:
@@ -186,6 +159,9 @@ class WebInterface:
     def _setup_namespaces(self) -> None:
         """
         Register Socket.IO namespaces for each overlay by automatically scanning the overlays directory.
+
+        Uses the factory function to create namespace classes dynamically,
+        eliminating the need for separate class definitions per overlay.
         """
         overlays_dir = resource_path('overlays')
         available_overlays = []
@@ -193,27 +169,19 @@ class WebInterface:
             for item in os.listdir(overlays_dir):
                 overlay_path = os.path.join(overlays_dir, item)
                 if os.path.isdir(overlay_path) and os.path.exists(os.path.join(overlay_path, f'{item}.html')):
-                    print(item)
                     available_overlays.append(item)
         except Exception as e:
             logging.error(f"Error scanning overlays directory: {e}")
 
         logging.info(f"Found overlays: {available_overlays}")
 
+        # Register namespaces dynamically using factory function
         for overlay in available_overlays:
-            print(overlay)
-            if overlay == 'driver_in_front':
-                self.socketio.on_namespace(DriverInFrontNamespace(f'/{overlay}'))
-                print(f"Registered driver in front namespace: {overlay}")
-            elif overlay == 'input_telemetry':
-                self.socketio.on_namespace(TelemetryNamespace(f'/{overlay}'))
-                print(f"Registered telemetry namespace: {overlay}")
-            elif overlay == 'standings':
-                self.socketio.on_namespace(StandingsNamespace(f'/{overlay}'))
-                print(f"Registered standings namespace: {overlay}")
-            elif overlay == 'tire_temps':
-                self.socketio.on_namespace(TireTempsNamespace(f'/{overlay}'))
-                print(f"Registered tire temps namespace: {overlay}")
+            # Create human-readable name for logging
+            namespace_name = overlay.replace('_', ' ')
+            NamespaceClass = create_namespace_class(namespace_name)
+            self.socketio.on_namespace(NamespaceClass(f'/{overlay}'))
+            logging.debug(f"Registered namespace: /{overlay}")
 
         logging.info(f"Registered Socket.IO namespaces for overlays: {available_overlays}")
 
@@ -296,63 +264,73 @@ class WebInterface:
         self.telemetry_thread.start()
         
     def _process_telemetry_data(self) -> None:
-        """Process and emit telemetry and lap time data."""
+        """Process and emit telemetry and lap time data.
+
+        Uses collect_all_data() to freeze the SDK buffer once and gather
+        all overlay data in a single pass for consistency.
+        """
         try:
-            data = self.data_provider.get_telemetry_data()
-            if data:
-                normalized_data = self._normalize_data(data)
-                
-                # Standard emission for all modes - keep it simple
+            # Collect all data with single buffer freeze
+            all_data = self.data_provider.collect_all_data()
+            if not all_data:
+                return
+
+            # Extract telemetry data
+            telemetry = all_data.get('telemetry', {})
+            if telemetry:
+                normalized_data = self._normalize_data(telemetry)
+
+                # Emit to input telemetry overlay
                 try:
                     self.socketio.emit('telemetry_update', normalized_data, namespace='/input_telemetry')
                 except Exception as e:
                     logging.error(f"Error in telemetry processing: {e}")
-                
-                # Create driver in front data
+
+                # Create driver in front data from telemetry
                 driver_data = {
-                    'front_last_lap_time': data.get('front_last_lap_time', 0.0),
-                    'front_best_lap_time': data.get('front_best_lap_time', 0.0),
-                    'lap_delta': data.get('lap_delta', 0.0),
-                    'target_pace': data.get('target_pace', 0.0),
-                    'session_type': data.get('session_type', 'race')
+                    'front_last_lap_time': telemetry.get('front_last_lap_time', 0.0),
+                    'front_best_lap_time': telemetry.get('front_best_lap_time', 0.0),
+                    'lap_delta': telemetry.get('lap_delta', 0.0),
+                    'target_pace': telemetry.get('target_pace', 0.0),
+                    'session_type': telemetry.get('session_type', 'race')
                 }
-                
+
                 try:
                     self.socketio.emit('driver_in_front_update', driver_data, namespace='/driver_in_front')
                 except Exception as e:
                     logging.error(f"Error in driver in front processing: {e}")
 
-                # Get standings data
-                standings_data = self.data_provider.get_standings_data()
-                if standings_data:
-                    try:
-                        self.socketio.emit('standings_update', standings_data, namespace='/standings')
-                    except Exception as e:
-                        logging.error(f"Error in standings processing: {e}")
+            # Emit standings data
+            standings_data = all_data.get('standings', {})
+            if standings_data:
+                try:
+                    self.socketio.emit('standings_update', standings_data, namespace='/standings')
+                except Exception as e:
+                    logging.error(f"Error in standings processing: {e}")
 
-                # Get lap timing data for practice/qualifying sessions
-                lap_timing_data = self.data_provider.get_lap_timing_data()
-                if lap_timing_data:
-                    try:
-                        self.socketio.emit('lap_timing_update', lap_timing_data, namespace='/standings')
-                    except Exception as e:
-                        logging.error(f"Error in lap timing processing: {e}")
+            # Emit lap timing data for practice/qualifying sessions
+            lap_timing_data = all_data.get('lap_timing', {})
+            if lap_timing_data:
+                try:
+                    self.socketio.emit('lap_timing_update', lap_timing_data, namespace='/standings')
+                except Exception as e:
+                    logging.error(f"Error in lap timing processing: {e}")
 
-                # Get tire temperature data (actual temps when available)
-                tire_data = self.data_provider.get_tire_data()
-                if tire_data:
-                    try:
-                        self.socketio.emit('tire_data_update', tire_data, namespace='/tire_temps')
-                    except Exception as e:
-                        logging.error(f"Error in tire temps processing: {e}")
+            # Emit tire temperature data (actual temps when available)
+            tire_data = all_data.get('tire_data', {})
+            if tire_data:
+                try:
+                    self.socketio.emit('tire_data_update', tire_data, namespace='/tire_temps')
+                except Exception as e:
+                    logging.error(f"Error in tire temps processing: {e}")
 
-                # Get tire temperature predictions (always available)
-                tire_predictions = self.data_provider.get_tire_predictions()
-                if tire_predictions:
-                    try:
-                        self.socketio.emit('tire_predictions_update', tire_predictions, namespace='/tire_temps')
-                    except Exception as e:
-                        logging.error(f"Error in tire predictions processing: {e}")
+            # Emit tire temperature predictions
+            tire_predictions = all_data.get('tire_predictions', {})
+            if tire_predictions:
+                try:
+                    self.socketio.emit('tire_predictions_update', tire_predictions, namespace='/tire_temps')
+                except Exception as e:
+                    logging.error(f"Error in tire predictions processing: {e}")
 
         except Exception as e:
             logging.error(f"Error in telemetry processing: {e}")

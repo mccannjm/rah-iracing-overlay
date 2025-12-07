@@ -15,7 +15,7 @@ except ImportError as e:
 class DataProvider:
     """
     Provides telemetry data from iRacing.
-    
+
     This class manages the connection to the iRacing SDK and handles
     retrieval of telemetry data and lap times for overlays.
     """
@@ -28,6 +28,14 @@ class DataProvider:
         self.is_connected = False
         self.last_connection_state = False  # Track state changes to avoid log spam
         self.lap_times: List[float] = []
+
+        # Buffer freeze state - tracks if buffer is already frozen this cycle
+        self._buffer_frozen = False
+
+        # Session info cache - parsed once per session change
+        self._cached_session_info: Optional[Dict] = None
+        self._cached_session_num: int = -1
+        self._cached_driver_info: Dict[int, Dict] = {}
 
         # Tire prediction system
         self.tire_predictor = None
@@ -74,10 +82,131 @@ class DataProvider:
             self.is_connected = False
             logging.info("Disconnected from iRacing")
 
+    def begin_frame(self) -> bool:
+        """
+        Begin a new data collection frame by freezing the SDK buffer.
+
+        Call this once at the start of each telemetry cycle before
+        collecting any data. This ensures all data methods see the
+        same consistent snapshot.
+
+        Returns:
+            bool: True if buffer was frozen successfully, False otherwise
+        """
+        if not self.is_connected:
+            return False
+
+        try:
+            self.ir_sdk.freeze_var_buffer_latest()
+            self._buffer_frozen = True
+            return True
+        except Exception as e:
+            logging.error(f"Error freezing buffer: {e}")
+            self._buffer_frozen = False
+            return False
+
+    def end_frame(self) -> None:
+        """
+        End the current data collection frame.
+
+        Call this after all data has been collected to reset state
+        for the next cycle.
+        """
+        self._buffer_frozen = False
+
+    def _get_parsed_session_info(self) -> Dict:
+        """
+        Get parsed SessionInfo with caching.
+
+        The SessionInfo YAML is only re-parsed when the session number changes,
+        significantly reducing CPU overhead since this is called multiple times
+        per frame.
+
+        Returns:
+            Dict: Parsed session info dictionary
+        """
+        try:
+            current_session_num = int(self.ir_sdk['SessionNum'] or -1)
+
+            # Return cached if session hasn't changed
+            if (self._cached_session_info is not None and
+                    current_session_num == self._cached_session_num):
+                return self._cached_session_info
+
+            # Parse fresh session info
+            raw = self.ir_sdk['SessionInfo']
+            if isinstance(raw, dict):
+                info = raw
+            else:
+                info = yaml.safe_load(raw or "") or {}
+
+            # Update cache
+            self._cached_session_info = info
+            self._cached_session_num = current_session_num
+
+            # Also cache driver info for quick lookups
+            self._cached_driver_info = {}
+            for driver in info.get('DriverInfo', {}).get('Drivers', []):
+                car_idx = int(driver.get('CarIdx', -1))
+                if car_idx >= 0:
+                    self._cached_driver_info[car_idx] = {
+                        'name': driver.get('UserName', 'Unknown'),
+                        'car_class_short': driver.get('CarClassShortName', ''),
+                        'car_class_color': driver.get('CarClassColor', 0xFFFFFF),
+                        'car_number': driver.get('CarNumber', ''),
+                        'car_screen_name': driver.get('CarScreenName', 'Unknown'),
+                    }
+
+            return info
+
+        except Exception as e:
+            logging.debug(f"Error parsing SessionInfo: {e}")
+            return self._cached_session_info or {}
+
+    def collect_all_data(self) -> Dict[str, Any]:
+        """
+        Collect all overlay data in a single pass with one buffer freeze.
+
+        This is the preferred method for collecting data as it ensures
+        consistency across all overlays.
+
+        Returns:
+            Dict containing all overlay data:
+            - telemetry: Basic telemetry data (speed, gear, inputs)
+            - standings: Race standings data
+            - lap_timing: Lap timing for practice/qualifying
+            - tire_data: Actual tire temperatures
+            - tire_predictions: Predicted tire temperatures
+        """
+        if not self.is_connected:
+            return {}
+
+        try:
+            # Freeze buffer once for all data collection
+            self.begin_frame()
+
+            result = {
+                'telemetry': self._extract_data(),
+                'standings': self._extract_standings() if self.is_connected else {},
+                'lap_timing': self._extract_lap_timing() if self.is_connected else {},
+                'tire_data': self._extract_tire_data() if self.is_connected else {},
+                'tire_predictions': self._get_tire_predictions_internal() if self.is_connected else {},
+            }
+
+            # End the frame
+            self.end_frame()
+
+            return result
+
+        except Exception as e:
+            logging.error(f"Error collecting all data: {e}")
+            self.end_frame()
+            return {}
+
     def get_telemetry_data(self) -> Dict[str, Union[float, int]]:
         """
         Retrieve telemetry data from iRacing.
-        
+
         Returns:
             Dict[str, Union[float, int]]: Dictionary containing telemetry values
                 or empty dict if not connected or error occurs
@@ -85,9 +214,11 @@ class DataProvider:
         if not self.is_connected:
             logging.debug("Not connected to iRacing")
             return {}
-            
+
         try:
-            self.ir_sdk.freeze_var_buffer_latest()
+            # Only freeze if not already frozen this frame
+            if not self._buffer_frozen:
+                self.ir_sdk.freeze_var_buffer_latest()
             return self._extract_data()
         except (TypeError, ValueError, KeyError) as e:
             logging.error(f"Error processing telemetry data: {e}")
@@ -211,25 +342,17 @@ class DataProvider:
         """
         Return the current session type ('Race', 'Qualify', 'Practice', …).
 
-        Works whether irsdk delivers SessionInfo as:
-        • a YAML string  **or**
-        • an already‑parsed dict
+        Uses cached SessionInfo to avoid repeated YAML parsing.
         """
         try:
             sess_num = int(self.ir_sdk['SessionNum'])
-
-            raw = self.ir_sdk['SessionInfo']
-            # iRacing 2024.4+ may give us a dict already
-            if isinstance(raw, dict):
-                info = raw
-            else:
-                info = yaml.safe_load(raw or "") or {}
+            info = self._get_parsed_session_info()
 
             for sess in info.get('Sessions', []):
                 if int(sess.get('SessionNum', -1)) == sess_num:
                     return str(sess.get('SessionType', 'Race'))
         except Exception as e:
-            logging.debug(f"Could not parse SessionInfo: {e}")
+            logging.debug(f"Could not get session type: {e}")
 
         # default so the overlay logic still works
         return 'Race'
@@ -317,7 +440,9 @@ class DataProvider:
             return {}
 
         try:
-            self.ir_sdk.freeze_var_buffer_latest()
+            # Only freeze if not already frozen this frame
+            if not self._buffer_frozen:
+                self.ir_sdk.freeze_var_buffer_latest()
             return self._extract_standings()
         except Exception as e:
             logging.error(f"Error extracting standings data: {e}")
@@ -329,7 +454,7 @@ class DataProvider:
 
         Calculates:
         - Current race positions
-        - Driver information from SessionInfo
+        - Driver information from SessionInfo (cached)
         - Time intervals between cars
         - Position deltas from race start
         - Lap counts and pit status
@@ -340,24 +465,9 @@ class DataProvider:
         # Get session info
         session_type = self._current_session_type()
 
-        # Parse SessionInfo for driver metadata
-        raw_session_info = self.ir_sdk['SessionInfo']
-        if isinstance(raw_session_info, dict):
-            session_info = raw_session_info
-        else:
-            session_info = yaml.safe_load(raw_session_info or "") or {}
-
-        # Build driver info lookup
-        driver_info = {}
-        for driver in session_info.get('DriverInfo', {}).get('Drivers', []):
-            car_idx = int(driver.get('CarIdx', -1))
-            if car_idx >= 0:
-                driver_info[car_idx] = {
-                    'name': driver.get('UserName', 'Unknown'),
-                    'car_class_short': driver.get('CarClassShortName', ''),
-                    'car_class_color': driver.get('CarClassColor', 0xFFFFFF),
-                    'car_number': driver.get('CarNumber', ''),
-                }
+        # Use cached session info and driver info
+        session_info = self._get_parsed_session_info()
+        driver_info = self._cached_driver_info
 
         # Determine if multiclass
         unique_classes = set(d['car_class_short'] for d in driver_info.values() if d['car_class_short'])
@@ -561,7 +671,9 @@ class DataProvider:
             return {}
 
         try:
-            self.ir_sdk.freeze_var_buffer_latest()
+            # Only freeze if not already frozen this frame
+            if not self._buffer_frozen:
+                self.ir_sdk.freeze_var_buffer_latest()
             return self._extract_lap_timing()
         except Exception as e:
             logging.error(f"Error extracting lap timing data: {e}")
@@ -619,7 +731,9 @@ class DataProvider:
             return {}
 
         try:
-            self.ir_sdk.freeze_var_buffer_latest()
+            # Only freeze if not already frozen this frame
+            if not self._buffer_frozen:
+                self.ir_sdk.freeze_var_buffer_latest()
             return self._extract_tire_data()
         except Exception as e:
             logging.error(f"Error extracting tire data: {e}")
@@ -780,6 +894,44 @@ class DataProvider:
             logging.error(f"Error getting tire predictions: {e}")
             return {}
 
+    def _get_tire_predictions_internal(self) -> Dict[str, Any]:
+        """
+        Internal method to get tire predictions without buffer freeze.
+
+        Used by collect_all_data() when buffer is already frozen.
+        """
+        if not self.tire_predictor or not self.is_connected:
+            return {}
+
+        try:
+            # Check for session changes
+            self._check_session_change()
+
+            # Get current telemetry for prediction (won't freeze if already frozen)
+            telemetry = self._extract_prediction_telemetry()
+
+            if not telemetry:
+                return {}
+
+            # Get predictions
+            predictions = self.tire_predictor.predict(telemetry)
+
+            # If in pit, calibrate with actual temps
+            if self.ir_sdk['OnPitRoad']:
+                actual_temps = self._get_actual_temps()
+                if actual_temps:
+                    self.tire_predictor.calibrate_with_actual(actual_temps)
+                    predictions['actual_temps'] = actual_temps
+                    predictions['in_pit'] = True
+            else:
+                predictions['in_pit'] = False
+
+            return predictions
+
+        except Exception as e:
+            logging.error(f"Error getting tire predictions: {e}")
+            return {}
+
     def _check_session_change(self) -> None:
         """Check if session has changed and update prediction session."""
         try:
@@ -809,39 +961,32 @@ class DataProvider:
             logging.error(f"Error checking session change: {e}")
 
     def _get_car_name(self) -> Optional[str]:
-        """Get current car name from SessionInfo."""
+        """Get current car name from cached SessionInfo."""
         try:
             player_idx = int(self.ir_sdk['PlayerCarIdx'])
-            session_info = self.ir_sdk['SessionInfo']
 
-            if isinstance(session_info, dict):
-                info = session_info
-            else:
-                info = yaml.safe_load(session_info or "") or {}
+            # Use cached driver info
+            if player_idx in self._cached_driver_info:
+                return self._cached_driver_info[player_idx].get('car_screen_name', 'Unknown')
 
+            # Fallback to parsing if cache miss
+            info = self._get_parsed_session_info()
             drivers = info.get('DriverInfo', {}).get('Drivers', [])
             for driver in drivers:
                 if int(driver.get('CarIdx', -1)) == player_idx:
                     return driver.get('CarScreenName', 'Unknown')
 
             return None
-        except:
+        except Exception:
             return None
 
     def _get_track_name(self) -> Optional[str]:
-        """Get current track name from SessionInfo."""
+        """Get current track name from cached SessionInfo."""
         try:
-            session_info = self.ir_sdk['SessionInfo']
-
-            if isinstance(session_info, dict):
-                info = session_info
-            else:
-                info = yaml.safe_load(session_info or "") or {}
-
+            info = self._get_parsed_session_info()
             weekend_info = info.get('WeekendInfo', {})
             return weekend_info.get('TrackDisplayName', 'Unknown')
-
-        except:
+        except Exception:
             return None
 
     def _extract_prediction_telemetry(self) -> Optional[Dict]:
@@ -851,7 +996,9 @@ class DataProvider:
         Similar to _extract_telemetry but includes all fields needed for prediction.
         """
         try:
-            self.ir_sdk.freeze_var_buffer_latest()
+            # Only freeze if not already frozen this frame
+            if not self._buffer_frozen:
+                self.ir_sdk.freeze_var_buffer_latest()
 
             # Reuse existing extraction methods
             telemetry_data = self._extract_data()

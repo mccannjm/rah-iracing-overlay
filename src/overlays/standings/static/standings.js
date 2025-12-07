@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let isConnected = false;
     let currentMode = 'standings'; // 'standings' or 'lap_timing'
     let compactMode = true; // Start in compact mode
+    let existingRows = new Map(); // car_idx -> DOM element for DOM diffing
 
     // DOM elements
     const standingsContent = document.getElementById('standingsContent');
@@ -59,10 +60,11 @@ document.addEventListener("DOMContentLoaded", function() {
             const sessionType = data.session_type ? data.session_type.toLowerCase() : 'race';
             const newMode = sessionType === 'race' ? 'standings' : 'lap_timing';
 
-            // If mode changed, clear content once
+            // If mode changed, clear content and reset DOM tracking
             if (newMode !== currentMode) {
                 currentMode = newMode;
                 standingsContent.innerHTML = '';
+                existingRows.clear();
             }
 
             // Throttle UI updates
@@ -87,10 +89,11 @@ document.addEventListener("DOMContentLoaded", function() {
             const sessionType = data.session_type ? data.session_type.toLowerCase() : '';
             if (sessionType && sessionType !== 'race') {
                 const newMode = 'lap_timing';
-                // If mode changed, clear content once
+                // If mode changed, clear content and reset DOM tracking
                 if (newMode !== currentMode) {
                     currentMode = newMode;
                     standingsContent.innerHTML = '';
+                    existingRows.clear();
                 }
             }
 
@@ -210,20 +213,96 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Render standings rows
+    // Render standings rows with DOM diffing
     function renderStandings(standings, playerIdx, isMulticlass) {
-        // Clear existing content
-        standingsContent.innerHTML = '';
-
         if (!standings || standings.length === 0) {
             standingsContent.innerHTML = '<div class="no-data">No standings data available</div>';
+            existingRows.clear();
             return;
         }
 
+        // Build set of current car indices
+        const currentCarIds = new Set(standings.map(d => d.car_idx));
+
+        // Remove rows for drivers no longer in view
+        for (const [carIdx, row] of existingRows) {
+            if (!currentCarIds.has(carIdx)) {
+                row.remove();
+                existingRows.delete(carIdx);
+            }
+        }
+
+        // Update or create rows in order
+        let previousRow = null;
         standings.forEach(driver => {
-            const row = createStandingRow(driver, driver.car_idx === playerIdx, isMulticlass);
-            standingsContent.appendChild(row);
+            const carIdx = driver.car_idx;
+            const isPlayer = carIdx === playerIdx;
+            let row = existingRows.get(carIdx);
+
+            if (row) {
+                // Update existing row in place
+                updateStandingRow(row, driver, isPlayer, isMulticlass);
+            } else {
+                // Create new row
+                row = createStandingRow(driver, isPlayer, isMulticlass);
+                existingRows.set(carIdx, row);
+            }
+
+            // Ensure correct order in DOM
+            if (previousRow) {
+                if (row.previousSibling !== previousRow) {
+                    previousRow.after(row);
+                }
+            } else {
+                if (standingsContent.firstChild !== row) {
+                    standingsContent.prepend(row);
+                }
+            }
+            previousRow = row;
         });
+    }
+
+    // Update an existing row with new data (avoids DOM recreation)
+    function updateStandingRow(row, driver, isPlayer, isMulticlass) {
+        // Update classes
+        row.className = 'standing-row';
+        if (isPlayer) row.classList.add('player-row');
+        if (driver.in_pit) row.classList.add('in-pit');
+
+        // Update cell values
+        row.querySelector('.col-pos').textContent = driver.position || '-';
+
+        const nameCell = row.querySelector('.col-name');
+        nameCell.textContent = driver.driver_name || 'Unknown';
+        nameCell.title = driver.driver_name || 'Unknown';
+
+        const classCell = row.querySelector('.col-class');
+        classCell.textContent = driver.car_class || '-';
+        if (isMulticlass && driver.car_class_color) {
+            classCell.style.color = '#' + driver.car_class_color.toString(16).padStart(6, '0');
+        } else {
+            classCell.style.color = '';
+        }
+
+        row.querySelector('.col-license').textContent = formatLicense(driver.license);
+        row.querySelector('.col-irating').textContent = driver.irating > 0 ? formatNumber(driver.irating) : '-';
+        row.querySelector('.col-lastlap').textContent = driver.last_lap_time > 0 ? formatTime(driver.last_lap_time) : '-';
+        row.querySelector('.col-interval').textContent = driver.interval || '-';
+
+        // Update delta with color
+        const deltaCell = row.querySelector('.col-delta');
+        const delta = driver.position_delta || 0;
+        deltaCell.className = 'col-delta';
+        if (delta > 0) {
+            deltaCell.textContent = '+' + delta;
+            deltaCell.classList.add('delta-positive');
+        } else if (delta < 0) {
+            deltaCell.textContent = delta;
+            deltaCell.classList.add('delta-negative');
+        } else {
+            deltaCell.textContent = '—';
+            deltaCell.classList.add('delta-neutral');
+        }
     }
 
     // Create a standing row element
