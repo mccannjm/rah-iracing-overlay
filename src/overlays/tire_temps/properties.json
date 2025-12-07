@@ -2,13 +2,13 @@
     "name": "tire_temps",
     "display_name": "Tire Temperatures",
     "description": "Real-time and predicted tire temperatures with wear indicators. Shows temps when available (in pits) and will support predictive modeling in the future.",
-    "enabled": false,
+    "enabled": true,
     "resolution": {
         "width": 500,
         "height": 400
     },
     "position": {
-        "x": 1100,
+        "x": 1400,
         "y": 100
     },
     "window": {
