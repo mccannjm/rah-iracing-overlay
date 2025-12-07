@@ -232,12 +232,8 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // Create a document fragment for efficient DOM updates
-        const fragment = document.createDocumentFragment();
-        const rowsInOrder = [];
-
-        // Update or create rows
-        standings.forEach(driver => {
+        // Update or create rows and ensure correct order
+        standings.forEach((driver, index) => {
             const carIdx = driver.car_idx;
             const isPlayer = carIdx === playerIdx;
             let row = existingRows.get(carIdx);
@@ -251,14 +247,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 existingRows.set(carIdx, row);
             }
 
-            rowsInOrder.push(row);
-        });
-
-        // Rebuild DOM order by appending in correct sequence
-        // This is more reliable than trying to move individual elements
-        standingsContent.innerHTML = '';
-        rowsInOrder.forEach(row => {
-            standingsContent.appendChild(row);
+            // Ensure row is in correct position without clearing DOM
+            const currentChild = standingsContent.children[index];
+            if (currentChild !== row) {
+                // Row needs to be moved to this position
+                if (currentChild) {
+                    standingsContent.insertBefore(row, currentChild);
+                } else {
+                    standingsContent.appendChild(row);
+                }
+            }
         });
     }
 
