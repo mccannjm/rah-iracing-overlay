@@ -314,6 +314,10 @@ html, body {
 /* Lap timing display styles */
 .lap-timing-container {
     padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 100%;
 }
 
 .timing-section {
@@ -321,6 +325,7 @@ html, body {
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .timing-section:last-child {

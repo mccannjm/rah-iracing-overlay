@@ -4,7 +4,7 @@
     "description": "Real-time and predicted tire temperatures with wear indicators. Shows temps when available (in pits) and will support predictive modeling in the future.",
     "enabled": true,
     "resolution": {
-        "width": 500,
+        "width": 420,
         "height": 400
     },
     "position": {

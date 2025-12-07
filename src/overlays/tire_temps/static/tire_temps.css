@@ -24,7 +24,7 @@ html, body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 6px;
+    padding: 4px;
     background: rgba(0, 0, 0, 0.85);
     box-sizing: border-box;
     overflow: hidden;
@@ -139,16 +139,17 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 6px;
+    gap: 4px;
     flex: 1;
-    max-height: calc(100% - 60px);
+    max-height: calc(100% - 40px);
+    width: 100%;
 }
 
 .tire-quadrant {
     background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 6px;
+    border-radius: 4px;
+    padding: 4px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -172,7 +173,7 @@ html, body {
 .tire-zones {
     display: flex;
     justify-content: space-between;
-    gap: 3px;
+    gap: 2px;
     flex: 1;
     min-height: 0;
 }
@@ -181,11 +182,11 @@ html, body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 3px;
-    padding: 4px 2px;
+    padding: 4px 3px;
     position: relative;
     min-width: 0;
 }
@@ -195,12 +196,14 @@ html, body {
     font-weight: 700;
     margin-bottom: 2px;
     transition: color 0.3s ease;
+    text-align: center;
 }
 
 .zone-label {
     font-size: 0.7em;
     color: #999;
     margin-bottom: 2px;
+    text-align: center;
 }
 
 /* Temperature Color Coding */
@@ -245,7 +248,8 @@ html, body {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
     overflow: hidden;
-    margin-top: 3px;
+    margin-top: auto;
+    align-self: stretch;
 }
 
 .wear-fill {
@@ -268,10 +272,10 @@ html, body {
 /* Status Info */
 .status-info {
     text-align: center;
-    padding: 6px;
+    padding: 4px;
     background: rgba(30, 30, 30, 0.8);
     border-radius: 3px;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 .status-info span {
