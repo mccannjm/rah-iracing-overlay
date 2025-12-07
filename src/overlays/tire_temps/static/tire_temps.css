@@ -24,7 +24,7 @@ html, body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 8px;
+    padding: 6px;
     background: rgba(0, 0, 0, 0.85);
     box-sizing: border-box;
     overflow: hidden;
@@ -139,16 +139,16 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
-    max-height: calc(100% - 80px);
+    max-height: calc(100% - 60px);
 }
 
 .tire-quadrant {
     background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%);
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 8px;
+    border-radius: 6px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -162,17 +162,17 @@ html, body {
 }
 
 .tire-label {
-    font-size: 1em;
+    font-size: 0.95em;
     font-weight: 700;
-    color: #ED2727;
+    color: #ffffff;
     text-align: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .tire-zones {
     display: flex;
     justify-content: space-between;
-    gap: 4px;
+    gap: 3px;
     flex: 1;
     min-height: 0;
 }
@@ -184,23 +184,23 @@ html, body {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.3);
-    border-radius: 4px;
-    padding: 6px 3px;
+    border-radius: 3px;
+    padding: 4px 2px;
     position: relative;
     min-width: 0;
 }
 
 .temp-value {
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: 700;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     transition: color 0.3s ease;
 }
 
 .zone-label {
-    font-size: 0.75em;
+    font-size: 0.7em;
     color: #999;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 /* Temperature Color Coding */
@@ -258,24 +258,24 @@ html, body {
 /* Tire Pressure */
 .tire-pressure {
     text-align: center;
-    font-size: 0.8em;
+    font-size: 0.75em;
     color: #DDD;
-    margin-top: 6px;
-    padding-top: 6px;
+    margin-top: 4px;
+    padding-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Status Info */
 .status-info {
     text-align: center;
-    padding: 8px;
+    padding: 6px;
     background: rgba(30, 30, 30, 0.8);
-    border-radius: 4px;
-    margin-top: 8px;
+    border-radius: 3px;
+    margin-top: 6px;
 }
 
 .status-info span {
-    font-size: 0.85em;
+    font-size: 0.75em;
     font-weight: 500;
 }
 

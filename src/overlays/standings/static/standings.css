@@ -313,14 +313,14 @@ html, body {
 
 /* Lap timing display styles */
 .lap-timing-container {
-    padding: 10px;
+    padding: 8px;
 }
 
 .timing-section {
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 12px;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
 }
 
 .timing-section:last-child {
@@ -328,12 +328,12 @@ html, body {
 }
 
 .timing-header {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.6px;
     color: #00d4ff;
-    margin-bottom: 10px;
-    padding-bottom: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
     border-bottom: 1px solid rgba(0, 212, 255, 0.3);
 }
 
@@ -341,11 +341,11 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 6px;
-    margin-bottom: 4px;
+    padding: 6px 4px;
+    margin-bottom: 3px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 4px;
-    font-size: 13px;
+    border-radius: 3px;
+    font-size: 12px;
 }
 
 .timing-row:last-child {
@@ -354,25 +354,27 @@ html, body {
 
 .timing-row.timing-highlight {
     background: rgba(0, 212, 255, 0.1);
-    border-left: 3px solid #00d4ff;
-    padding-left: 9px;
+    border-left: 2px solid #00d4ff;
+    padding-left: 6px;
 }
 
 .timing-label {
     color: rgba(255, 255, 255, 0.7);
     font-weight: 500;
+    font-size: 11px;
 }
 
 .timing-value {
     color: #ffffff;
     font-weight: 600;
     font-family: 'Courier New', monospace;
+    font-size: 12px;
 }
 
 .timing-value.timing-best {
     color: #00ff88;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .timing-value.timing-current {
@@ -392,6 +394,9 @@ html, body {
     transition: all 0.2s ease;
     min-width: 30px;
     font-weight: bold;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 1;
 }
 
 .size-toggle-btn:hover {

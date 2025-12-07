@@ -81,6 +81,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
             lapTimingData = data;
 
+            // Determine mode from lap timing data if available
+            const sessionType = data.session_type ? data.session_type.toLowerCase() : '';
+            if (sessionType && sessionType !== 'race') {
+                const newMode = 'lap_timing';
+                // If mode changed, clear content once
+                if (newMode !== currentMode) {
+                    currentMode = newMode;
+                    standingsContent.innerHTML = '';
+                }
+            }
+
             // Throttle UI updates
             const now = Date.now();
             if (now - lastUpdate >= CONFIG.updateThrottle) {
