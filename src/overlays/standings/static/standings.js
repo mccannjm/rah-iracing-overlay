@@ -232,8 +232,11 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // Update or create rows in order
-        let previousRow = null;
+        // Create a document fragment for efficient DOM updates
+        const fragment = document.createDocumentFragment();
+        const rowsInOrder = [];
+
+        // Update or create rows
         standings.forEach(driver => {
             const carIdx = driver.car_idx;
             const isPlayer = carIdx === playerIdx;
@@ -248,60 +251,78 @@ document.addEventListener("DOMContentLoaded", function() {
                 existingRows.set(carIdx, row);
             }
 
-            // Ensure correct order in DOM
-            if (previousRow) {
-                if (row.previousSibling !== previousRow) {
-                    previousRow.after(row);
-                }
-            } else {
-                if (standingsContent.firstChild !== row) {
-                    standingsContent.prepend(row);
-                }
-            }
-            previousRow = row;
+            rowsInOrder.push(row);
+        });
+
+        // Rebuild DOM order by appending in correct sequence
+        // This is more reliable than trying to move individual elements
+        standingsContent.innerHTML = '';
+        rowsInOrder.forEach(row => {
+            standingsContent.appendChild(row);
         });
     }
 
     // Update an existing row with new data (avoids DOM recreation)
     function updateStandingRow(row, driver, isPlayer, isMulticlass) {
+        // Validate driver data
+        if (!driver || typeof driver !== 'object') {
+            console.error('Invalid driver data in updateStandingRow:', driver);
+            return;
+        }
+
         // Update classes
         row.className = 'standing-row';
         if (isPlayer) row.classList.add('player-row');
         if (driver.in_pit) row.classList.add('in-pit');
 
-        // Update cell values
-        row.querySelector('.col-pos').textContent = driver.position || '-';
+        // Update cell values with defensive checks
+        const posCell = row.querySelector('.col-pos');
+        if (posCell) posCell.textContent = driver.position || '-';
 
         const nameCell = row.querySelector('.col-name');
-        nameCell.textContent = driver.driver_name || 'Unknown';
-        nameCell.title = driver.driver_name || 'Unknown';
-
-        const classCell = row.querySelector('.col-class');
-        classCell.textContent = driver.car_class || '-';
-        if (isMulticlass && driver.car_class_color) {
-            classCell.style.color = '#' + driver.car_class_color.toString(16).padStart(6, '0');
-        } else {
-            classCell.style.color = '';
+        if (nameCell) {
+            const driverName = driver.driver_name || 'Unknown';
+            nameCell.textContent = driverName;
+            nameCell.title = driverName;
         }
 
-        row.querySelector('.col-license').textContent = formatLicense(driver.license);
-        row.querySelector('.col-irating').textContent = driver.irating > 0 ? formatNumber(driver.irating) : '-';
-        row.querySelector('.col-lastlap').textContent = driver.last_lap_time > 0 ? formatTime(driver.last_lap_time) : '-';
-        row.querySelector('.col-interval').textContent = driver.interval || '-';
+        const classCell = row.querySelector('.col-class');
+        if (classCell) {
+            classCell.textContent = driver.car_class || '-';
+            if (isMulticlass && driver.car_class_color) {
+                classCell.style.color = '#' + driver.car_class_color.toString(16).padStart(6, '0');
+            } else {
+                classCell.style.color = '';
+            }
+        }
+
+        const licenseCell = row.querySelector('.col-license');
+        if (licenseCell) licenseCell.textContent = formatLicense(driver.license);
+
+        const iratingCell = row.querySelector('.col-irating');
+        if (iratingCell) iratingCell.textContent = driver.irating > 0 ? formatNumber(driver.irating) : '-';
+
+        const lastlapCell = row.querySelector('.col-lastlap');
+        if (lastlapCell) lastlapCell.textContent = driver.last_lap_time > 0 ? formatTime(driver.last_lap_time) : '-';
+
+        const intervalCell = row.querySelector('.col-interval');
+        if (intervalCell) intervalCell.textContent = driver.interval || '-';
 
         // Update delta with color
         const deltaCell = row.querySelector('.col-delta');
-        const delta = driver.position_delta || 0;
-        deltaCell.className = 'col-delta';
-        if (delta > 0) {
-            deltaCell.textContent = '+' + delta;
-            deltaCell.classList.add('delta-positive');
-        } else if (delta < 0) {
-            deltaCell.textContent = delta;
-            deltaCell.classList.add('delta-negative');
-        } else {
-            deltaCell.textContent = '—';
-            deltaCell.classList.add('delta-neutral');
+        if (deltaCell) {
+            const delta = driver.position_delta || 0;
+            deltaCell.className = 'col-delta';
+            if (delta > 0) {
+                deltaCell.textContent = '+' + delta;
+                deltaCell.classList.add('delta-positive');
+            } else if (delta < 0) {
+                deltaCell.textContent = delta;
+                deltaCell.classList.add('delta-negative');
+            } else {
+                deltaCell.textContent = '—';
+                deltaCell.classList.add('delta-neutral');
+            }
         }
     }
 

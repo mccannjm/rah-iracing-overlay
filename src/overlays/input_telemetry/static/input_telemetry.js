@@ -32,6 +32,10 @@ document.addEventListener("DOMContentLoaded", function() {
     socket.on('telemetry_update', function(data) {
         hasData = true;
         updateTelemetryData(data);
+        // Restart animation if it's not running
+        if (!animationFrameId && isConnected) {
+            startAnimation();
+        }
     });
 
     // Handle heartbeats to ensure connection is alive
